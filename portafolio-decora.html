@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Portafolio Decora</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #F5F5F5; }
+
+    .header {
+      background: #E8211A;
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .header-logo {
+      width: 42px; height: 42px;
+      background: white;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 18px; color: #E8211A;
+    }
+    .header-text h1 { font-size: 20px; font-weight: 600; color: white; }
+    .header-text p { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 2px; }
+
+    .filters-bar {
+      background: white;
+      border-bottom: 1px solid #E0E0E0;
+      padding: 0.9rem 2rem;
+      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+    }
+    .filter-label { font-size: 13px; color: #666; font-weight: 500; }
+    select, input[type="text"] {
+      font-size: 13px; padding: 6px 10px;
+      border: 1px solid #CCC; border-radius: 6px;
+      background: white; color: #333; outline: none;
+    }
+    select:focus, input:focus { border-color: #E8211A; }
+    input[type="text"] { flex: 1; min-width: 180px; }
+    .results-count { font-size: 13px; color: #888; margin-left: auto; }
+
+    .status-bar {
+      background: #FDF2F2; border: 1px solid #FFCDD2;
+      border-radius: 6px; padding: 8px 14px;
+      margin: 1rem 2rem 0; font-size: 13px; color: #B71C1C;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #E8211A; flex-shrink: 0; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 14px; padding: 1.2rem 2rem;
+    }
+    .card {
+      background: white; border: 1px solid #E0E0E0;
+      border-radius: 10px; overflow: hidden;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .card:hover { border-color: #E8211A; box-shadow: 0 2px 8px rgba(232,33,26,0.1); }
+    .card-img {
+      width: 100%; aspect-ratio: 1; object-fit: contain;
+      background: #F9F9F9; display: block; padding: 10px;
+    }
+    .card-img-placeholder {
+      width: 100%; aspect-ratio: 1; background: #F9F9F9;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px; color: #CCC;
+    }
+    .card-body { padding: 10px 12px 12px; }
+    .card-sku { font-size: 11px; color: #999; margin-bottom: 3px; }
+    .card-name { font-size: 13px; font-weight: 600; color: #222; margin-bottom: 8px; line-height: 1.4; }
+    .card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+    .tag {
+      font-size: 11px; padding: 2px 8px; border-radius: 99px;
+      background: #FDF2F2; color: #B71C1C; border: 1px solid #FFCDD2;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1; text-align: center;
+      padding: 3rem; color: #999; font-size: 14px;
+    }
+    .loading {
+      grid-column: 1 / -1; text-align: center;
+      padding: 3rem; color: #999; font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .header { padding: 1rem; }
+      .filters-bar { padding: 0.8rem 1rem; }
+      .grid { padding: 1rem; gap: 10px; }
+      .status-bar { margin: 0.8rem 1rem 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">J</div>
+  <div class="header-text">
+    <h1>Portafolio Decora</h1>
+    <p>Catálogo de productos decorativos</p>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="status-dot"></div>
+  <span id="status-text">Cargando catálogo...</span>
+</div>
+
+<div class="filters-bar">
+  <span class="filter-label">Filtrar por:</span>
+  <select id="filter-linea" onchange="filtrar()">
+    <option value="">Todas las líneas</option>
+  </select>
+  <select id="filter-sublinea" onchange="filtrar()">
+    <option value="">Todas las sublíneas</option>
+  </select>
+  <input type="text" id="search" placeholder="Buscar por nombre o SKU..." oninput="filtrar()" />
+  <span class="results-count" id="results-count"></span>
+</div>
+
+<div class="grid" id="grid">
+  <div class="loading">Cargando productos...</div>
+</div>
+
+<script>
+  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQmWJ44LQGwvFPIr5JJQ0JSKkLbK8z8u3KBcgMK3LApd1Qso1aEHqhxtMbNHadOW0Exu5NUrHCrgHHR/pub?gid=0&single=true&output=csv";
+
+  let todosLosProductos = [];
+
+  function parseCSV(text) {
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    return lines.slice(1).map(line => {
+      const values = [];
+      let current = '';
+      let inQuotes = false;
+      for (let ch of line) {
+        if (ch === '"') { inQuotes = !inQuotes; }
+        else if (ch === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+        else { current += ch; }
+      }
+      values.push(current.trim());
+      const obj = {};
+      headers.forEach((h, i) => obj[h] = values[i] || '');
+      return obj;
+    }).filter(p => p.SKU || p.Sku || p.sku);
+  }
+
+  async function cargarProductos() {
+    try {
+      const res = await fetch(SHEET_URL);
+      const text = await res.text();
+      const raw = parseCSV(text);
+      todosLosProductos = raw.map(p => ({
+        sku:      p.SKU      || p.Sku      || p.sku      || '',
+        nombre:   p.Nombre   || p.nombre   || '',
+        linea:    p.Linea    || p.linea    || p.Línea    || p.línea   || '',
+        sublinea: p.Sublinea || p.sublinea || p.Sublínea || p.sublínea|| '',
+        foto:     p.Foto     || p.foto     || ''
+      }));
+      document.getElementById('status-text').textContent =
+        todosLosProductos.length + ' productos cargados correctamente.';
+      poblarFiltros();
+      filtrar();
+    } catch(e) {
+      document.getElementById('status-text').textContent =
+        'Error al cargar el catálogo. Verifica que el Google Sheets esté publicado correctamente.';
+      document.getElementById('grid').innerHTML =
+        '<div class="empty-state">No se pudieron cargar los productos.</div>';
+    }
+  }
+
+  function poblarFiltros() {
+    const lineas = [...new Set(todosLosProductos.map(p => p.linea).filter(Boolean))].sort();
+    const sel = document.getElementById('filter-linea');
+    sel.innerHTML = '<option value="">Todas las líneas</option>';
+    lineas.forEach(l => {
+      const o = document.createElement('option'); o.value = l; o.textContent = l; sel.appendChild(o);
+    });
+  }
+
+  function filtrar() {
+    const linea = document.getElementById('filter-linea').value;
+    const busqueda = document.getElementById('search').value.toLowerCase();
+
+    const selSub = document.getElementById('filter-sublinea');
+    if (linea) {
+      const subs = [...new Set(todosLosProductos.filter(p => p.linea === linea).map(p => p.sublinea).filter(Boolean))].sort();
+      const current = selSub.value;
+      selSub.innerHTML = '<option value="">Todas las sublíneas</option>';
+      subs.forEach(s => { const o = document.createElement('option'); o.value=s; o.textContent=s; selSub.appendChild(o); });
+      if (subs.includes(current)) selSub.value = current;
+    } else {
+      selSub.innerHTML = '<option value="">Todas las sublíneas</option>';
+    }
+
+    const sublinea = selSub.value;
+    const resultado = todosLosProductos.filter(p => {
+      if (linea && p.linea !== linea) return false;
+      if (sublinea && p.sublinea !== sublinea) return false;
+      if (busqueda && !p.nombre.toLowerCase().includes(busqueda) && !p.sku.toLowerCase().includes(busqueda)) return false;
+      return true;
+    });
+
+    document.getElementById('results-count').textContent = resultado.length + ' productos';
+    const grid = document.getElementById('grid');
+
+    if (resultado.length === 0) {
+      grid.innerHTML = '<div class="empty-state">No se encontraron productos con esos filtros.</div>';
+      return;
+    }
+
+    grid.innerHTML = resultado.map(p => `
+      <div class="card">
+        ${p.foto
+          ? `<img class="card-img" src="${p.foto}" alt="${p.nombre}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+          : ''}
+        <div class="card-img-placeholder" ${p.foto ? 'style="display:none"' : ''}>🏺</div>
+        <div class="card-body">
+          <div class="card-sku">SKU: ${p.sku}</div>
+          <div class="card-name">${p.nombre}</div>
+          <div class="card-tags">
+            ${p.linea ? `<span class="tag">${p.linea}</span>` : ''}
+            ${p.sublinea ? `<span class="tag">${p.sublinea}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  cargarProductos();
+</script>
+</body>
+</html>
