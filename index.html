@@ -257,6 +257,25 @@
       background-color: white;
     }
 
+    .btn-ghost {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 9px 14px;
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-sm);
+      background: transparent;
+      color: var(--c-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-left: auto;
+    }
+    .btn-ghost:hover {
+      border-color: var(--c-brand);
+      color: var(--c-brand);
+      background: var(--c-brand-soft);
+    }
+
     .active-chips {
       max-width: 1280px;
       margin: 0 auto;
@@ -626,11 +645,14 @@
         <option value="">Todas las sublíneas</option>
       </select>
       <select id="filtro-orden" class="filter-select">
+        <option value="sku-desc">SKU más reciente</option>
+        <option value="sku-asc">SKU más antiguo</option>
         <option value="nombre-asc">Nombre A–Z</option>
         <option value="nombre-desc">Nombre Z–A</option>
         <option value="stock-desc">Más stock primero</option>
         <option value="stock-asc">Menos stock primero</option>
       </select>
+      <button id="btn-limpiar-filtros" class="btn-ghost" type="button">Limpiar filtros</button>
     </div>
     <div class="active-chips" id="active-chips"></div>
   </section>
@@ -897,11 +919,15 @@
       resultado.sort((a, b) => {
         const stockA = tienda ? (a.stockPorTienda[tienda] || 0) : a.stockTotal;
         const stockB = tienda ? (b.stockPorTienda[tienda] || 0) : b.stockTotal;
+        const cmpNum = { numeric: true, sensitivity: 'base' };
         switch (orden) {
+          case 'sku-asc':     return a.sku.localeCompare(b.sku, undefined, cmpNum);
+          case 'nombre-asc':  return a.nombre.localeCompare(b.nombre);
           case 'nombre-desc': return b.nombre.localeCompare(a.nombre);
           case 'stock-desc':  return stockB - stockA;
           case 'stock-asc':   return stockA - stockB;
-          default:            return a.nombre.localeCompare(b.nombre);
+          case 'sku-desc':
+          default:            return b.sku.localeCompare(a.sku, undefined, cmpNum);
         }
       });
 
@@ -1027,13 +1053,15 @@
       });
       document.getElementById('filtro-busqueda').addEventListener('input', aplicarFiltros);
 
-      document.getElementById('btn-clear-all').addEventListener('click', () => {
+      const limpiarTodo = () => {
         ['filtro-tienda', 'filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
           document.getElementById(id).selectedIndex = 0;
         });
         document.getElementById('filtro-busqueda').value = '';
         aplicarFiltros();
-      });
+      };
+      document.getElementById('btn-clear-all').addEventListener('click', limpiarTodo);
+      document.getElementById('btn-limpiar-filtros').addEventListener('click', limpiarTodo);
     });
 
     // Hacer toggleDetalle accesible desde el atributo onclick inline
