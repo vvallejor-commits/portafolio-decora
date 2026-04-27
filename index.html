@@ -1,238 +1,1043 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Portafolio Decora</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portafolio Decora — Catálogo y disponibilidad</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #F5F5F5; }
+    /* =========================================================
+       PALETA Y VARIABLES
+       ========================================================= */
+    :root {
+      --c-bg: #FAFAF7;
+      --c-surface: #FFFFFF;
+      --c-text: #1A1A1A;
+      --c-muted: #6B7280;
+      --c-border: #E5E7EB;
+      --c-brand: #C8102E;
+      --c-brand-dark: #9A0D24;
+      --c-brand-soft: #FEF2F4;
+      --c-stock-high: #15803D;
+      --c-stock-high-bg: #DCFCE7;
+      --c-stock-low: #B45309;
+      --c-stock-low-bg: #FEF3C7;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+      --r-sm: 6px;
+      --r-md: 10px;
+      --r-lg: 16px;
+    }
 
-    .header {
-      background: #E8211A;
-      padding: 1.2rem 2rem;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      background: var(--c-bg);
+      color: var(--c-text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* =========================================================
+       HEADER DE MARCA
+       ========================================================= */
+    .brand-header {
+      background: linear-gradient(135deg, var(--c-brand) 0%, var(--c-brand-dark) 100%);
+      color: white;
+      padding: 28px 16px;
+    }
+    .brand-content {
+      max-width: 1280px;
+      margin: 0 auto;
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 16px;
     }
-    .header-logo {
-      width: 42px; height: 42px;
+    .logo {
+      width: 56px;
+      height: 56px;
       background: white;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 18px; color: #E8211A;
+      color: var(--c-brand);
+      border-radius: var(--r-md);
+      display: grid;
+      place-items: center;
+      font-size: 30px;
+      font-weight: 700;
+      box-shadow: var(--shadow-md);
+      flex-shrink: 0;
     }
-    .header-text h1 { font-size: 20px; font-weight: 600; color: white; }
-    .header-text p { font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 2px; }
+    .brand-text h1 {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .brand-text p {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-top: 2px;
+    }
 
+    /* =========================================================
+       BARRA DE TIENDA (sticky)
+       ========================================================= */
+    .store-bar {
+      background: white;
+      border-bottom: 1px solid var(--c-border);
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      box-shadow: var(--shadow-sm);
+    }
+    .store-bar-content {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .store-selector-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .store-selector-group .label {
+      font-size: 14px;
+      color: var(--c-muted);
+      font-weight: 500;
+    }
+    .store-select {
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 9px 36px 9px 14px;
+      border: 1.5px solid var(--c-brand);
+      border-radius: var(--r-sm);
+      background: var(--c-brand-soft);
+      color: var(--c-brand-dark);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%23C8102E' d='M2 4l4 4 4-4z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      transition: background-color 0.15s;
+    }
+    .store-select:hover { background-color: white; }
+    .last-update {
+      font-size: 13px;
+      color: var(--c-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .last-update .dot {
+      width: 8px; height: 8px;
+      background: #16A34A;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(0.85); }
+    }
+
+    /* =========================================================
+       STATS
+       ========================================================= */
+    .stats-bar {
+      background: var(--c-bg);
+      border-bottom: 1px solid var(--c-border);
+    }
+    .stats-content {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 22px 16px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stat-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--c-text);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--c-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 500;
+    }
+
+    /* =========================================================
+       FILTROS
+       ========================================================= */
     .filters-bar {
       background: white;
-      border-bottom: 1px solid #E0E0E0;
-      padding: 0.9rem 2rem;
-      display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+      border-bottom: 1px solid var(--c-border);
+      position: sticky;
+      top: 64px;
+      z-index: 15;
     }
-    .filter-label { font-size: 13px; color: #666; font-weight: 500; }
-    select, input[type="text"] {
-      font-size: 13px; padding: 6px 10px;
-      border: 1px solid #CCC; border-radius: 6px;
-      background: white; color: #333; outline: none;
+    .filters-content {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
     }
-    select:focus, input:focus { border-color: #E8211A; }
-    input[type="text"] { flex: 1; min-width: 180px; }
-    .results-count { font-size: 13px; color: #888; margin-left: auto; }
+    .filter-search {
+      flex: 1;
+      min-width: 200px;
+      max-width: 360px;
+      position: relative;
+    }
+    .filter-search input {
+      width: 100%;
+      padding: 9px 12px 9px 36px;
+      font-family: inherit;
+      font-size: 14px;
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-sm);
+      background: var(--c-bg);
+    }
+    .filter-search::before {
+      content: '🔍';
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      opacity: 0.5;
+    }
+    .filter-search input:focus {
+      outline: none;
+      border-color: var(--c-brand);
+      background: white;
+    }
+    .filter-select {
+      font-family: inherit;
+      font-size: 14px;
+      padding: 9px 32px 9px 12px;
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-sm);
+      background: var(--c-bg);
+      color: var(--c-text);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path fill='%236B7280' d='M2 4l4 4 4-4z'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+    }
+    .filter-select:hover { background-color: white; }
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--c-brand);
+      background-color: white;
+    }
 
-    .status-bar {
-      background: #FDF2F2; border: 1px solid #FFCDD2;
-      border-radius: 6px; padding: 8px 14px;
-      margin: 1rem 2rem 0; font-size: 13px; color: #B71C1C;
-      display: flex; align-items: center; gap: 8px;
+    .active-chips {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 16px 12px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
     }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #E8211A; flex-shrink: 0; }
+    .active-chips:empty { display: none; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--c-brand-soft);
+      color: var(--c-brand-dark);
+      padding: 4px 8px 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .chip:hover {
+      background: #FCDADD;
+      border-color: var(--c-brand);
+    }
+    .chip .x {
+      width: 18px; height: 18px;
+      display: grid; place-items: center;
+      background: rgba(200, 16, 46, 0.15);
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* =========================================================
+       RESULTADOS Y GRID
+       ========================================================= */
+    .results {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+    .results-header {
+      font-size: 14px;
+      color: var(--c-muted);
+      margin-bottom: 18px;
+    }
+    .results-header strong { color: var(--c-text); font-weight: 600; }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-      gap: 14px; padding: 1.2rem 2rem;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 18px;
     }
+
+    /* =========================================================
+       CARD DE PRODUCTO
+       ========================================================= */
     .card {
-      background: white; border: 1px solid #E0E0E0;
-      border-radius: 10px; overflow: hidden;
-      transition: border-color 0.15s, box-shadow 0.15s;
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+      position: relative;
     }
-    .card:hover { border-color: #E8211A; box-shadow: 0 2px 8px rgba(232,33,26,0.1); }
-    .card-img {
-      width: 100%; aspect-ratio: 1; object-fit: contain;
-      background: #F9F9F9; display: block; padding: 10px;
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
     }
-    .card-img-placeholder {
-      width: 100%; aspect-ratio: 1; background: #F9F9F9;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 36px; color: #CCC;
+    .card-image {
+      aspect-ratio: 1;
+      background: #F5F5F2;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      position: relative;
     }
-    .card-body { padding: 10px 12px 12px; }
-    .card-sku { font-size: 11px; color: #999; margin-bottom: 3px; }
-    .card-name { font-size: 13px; font-weight: 600; color: #222; margin-bottom: 8px; line-height: 1.4; }
-    .card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+    .card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s;
+    }
+    .card:hover .card-image img { transform: scale(1.05); }
+    .card-image .placeholder {
+      font-size: 48px;
+      opacity: 0.3;
+    }
+    .card-body {
+      padding: 12px 14px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .card-sku {
+      font-size: 11px;
+      color: var(--c-muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .card-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--c-text);
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 38px;
+    }
+    .card-tags {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-top: auto;
+      padding-top: 8px;
+    }
     .tag {
-      font-size: 11px; padding: 2px 8px; border-radius: 99px;
-      background: #FDF2F2; color: #B71C1C; border: 1px solid #FFCDD2;
+      font-size: 11px;
+      background: #F3F4F6;
+      color: var(--c-muted);
+      padding: 2px 8px;
+      border-radius: 4px;
     }
 
+    /* Badge de stock */
+    .stock-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 999px;
+      align-self: flex-start;
+      margin-top: 4px;
+    }
+    .stock-badge.high {
+      background: var(--c-stock-high-bg);
+      color: var(--c-stock-high);
+    }
+    .stock-badge.low {
+      background: var(--c-stock-low-bg);
+      color: var(--c-stock-low);
+    }
+    .stock-badge.detail {
+      cursor: pointer;
+      user-select: none;
+    }
+    .stock-badge.detail::after {
+      content: 'i';
+      display: inline-grid;
+      place-items: center;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.1);
+      font-size: 10px;
+      font-weight: 700;
+      font-style: italic;
+      margin-left: 2px;
+    }
+
+    /* Popover de desglose por tienda */
+    .stock-detail {
+      display: none;
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      right: 12px;
+      background: #1A1A1A;
+      color: white;
+      padding: 12px 14px;
+      border-radius: var(--r-sm);
+      font-size: 12px;
+      z-index: 20;
+      box-shadow: var(--shadow-lg);
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    .stock-detail.open { display: block; }
+    .stock-detail h4 {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+      opacity: 0.6;
+    }
+    .stock-detail .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .stock-detail .row:first-of-type { border-top: none; }
+    .stock-detail .row b { font-weight: 700; }
+
+    /* =========================================================
+       ESTADO VACÍO Y CARGA
+       ========================================================= */
     .empty-state {
-      grid-column: 1 / -1; text-align: center;
-      padding: 3rem; color: #999; font-size: 14px;
+      text-align: center;
+      padding: 70px 20px;
+      color: var(--c-muted);
     }
-    .loading {
-      grid-column: 1 / -1; text-align: center;
-      padding: 3rem; color: #999; font-size: 14px;
+    .empty-state .empty-icon {
+      font-size: 56px;
+      margin-bottom: 14px;
+    }
+    .empty-state h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--c-text);
+      margin-bottom: 6px;
+    }
+    .empty-state p {
+      font-size: 14px;
+      margin-bottom: 18px;
+    }
+    .btn-clear {
+      background: var(--c-brand);
+      color: white;
+      border: none;
+      padding: 10px 22px;
+      border-radius: var(--r-sm);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-clear:hover { background: var(--c-brand-dark); }
+
+    .loading-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 18px;
+    }
+    .loading-card {
+      background: linear-gradient(110deg, #EFEFEC 30%, #F8F8F6 50%, #EFEFEC 70%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s ease-in-out infinite;
+      height: 320px;
+      border-radius: var(--r-md);
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
 
-    @media (max-width: 600px) {
-      .header { padding: 1rem; }
-      .filters-bar { padding: 0.8rem 1rem; }
-      .grid { padding: 1rem; gap: 10px; }
-      .status-bar { margin: 0.8rem 1rem 0; }
+    /* =========================================================
+       BANNER DE SETUP
+       ========================================================= */
+    .setup-banner {
+      background: var(--c-stock-low-bg);
+      border-bottom: 2px solid var(--c-stock-low);
+      padding: 14px 16px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--c-stock-low);
+      line-height: 1.6;
+    }
+    .setup-banner code {
+      background: rgba(0,0,0,0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: ui-monospace, monospace;
+      font-size: 12px;
+    }
+
+    /* =========================================================
+       FOOTER
+       ========================================================= */
+    footer {
+      text-align: center;
+      padding: 28px 16px;
+      color: var(--c-muted);
+      font-size: 12px;
+      border-top: 1px solid var(--c-border);
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+    @media (max-width: 720px) {
+      .stats-content { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .stat:nth-child(3) { grid-column: 1 / -1; }
+      .stat-value { font-size: 22px; }
+      .filters-bar { position: static; }
+      .filter-search { max-width: 100%; }
+      .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .brand-text h1 { font-size: 20px; }
+      .store-bar-content { flex-direction: column; align-items: stretch; gap: 10px; }
+      .last-update { font-size: 12px; }
+      .card-name { font-size: 13px; }
+    }
+    @media (max-width: 420px) {
+      .grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-logo">J</div>
-  <div class="header-text">
-    <h1>Portafolio Decora</h1>
-    <p>Catálogo de productos decorativos</p>
-  </div>
-</div>
-
-<div class="status-bar">
-  <div class="status-dot"></div>
-  <span id="status-text">Cargando catálogo...</span>
-</div>
-
-<div class="filters-bar">
-  <span class="filter-label">Filtrar por:</span>
-  <select id="filter-linea" onchange="filtrar()">
-    <option value="">Todas las líneas</option>
-  </select>
-  <select id="filter-sublinea" onchange="filtrar()">
-    <option value="">Todas las sublíneas</option>
-  </select>
-  <input type="text" id="search" placeholder="Buscar por nombre o SKU..." oninput="filtrar()" />
-  <span class="results-count" id="results-count"></span>
-</div>
-
-<div class="grid" id="grid">
-  <div class="loading">Cargando productos...</div>
-</div>
-
-<script>
-  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQmWJ44LQGwvFPIr5JJQ0JSKkLbK8z8u3KBcgMK3LApd1Qso1aEHqhxtMbNHadOW0Exu5NUrHCrgHHR/pub?gid=0&single=true&output=csv";
-
-  let todosLosProductos = [];
-
-  function parseCSV(text) {
-    const lines = text.trim().split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-    return lines.slice(1).map(line => {
-      const values = [];
-      let current = '';
-      let inQuotes = false;
-      for (let ch of line) {
-        if (ch === '"') { inQuotes = !inQuotes; }
-        else if (ch === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
-        else { current += ch; }
-      }
-      values.push(current.trim());
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = values[i] || '');
-      return obj;
-    }).filter(p => p.SKU || p.Sku || p.sku);
-  }
-
-  async function cargarProductos() {
-    try {
-      const res = await fetch(SHEET_URL);
-      const text = await res.text();
-      const raw = parseCSV(text);
-      todosLosProductos = raw.map(p => ({
-        sku:      p.SKU      || p.Sku      || p.sku      || '',
-        nombre:   p.Nombre   || p.nombre   || '',
-        linea:    p.Linea    || p.linea    || p.Línea    || p.línea   || '',
-        sublinea: p.Sublinea || p.sublinea || p.Sublínea || p.sublínea|| '',
-        foto:     p.Foto     || p.foto     || ''
-      }));
-      document.getElementById('status-text').textContent =
-        todosLosProductos.length + ' productos cargados correctamente.';
-      poblarFiltros();
-      filtrar();
-    } catch(e) {
-      document.getElementById('status-text').textContent =
-        'Error al cargar el catálogo. Verifica que el Google Sheets esté publicado correctamente.';
-      document.getElementById('grid').innerHTML =
-        '<div class="empty-state">No se pudieron cargar los productos.</div>';
-    }
-  }
-
-  function poblarFiltros() {
-    const lineas = [...new Set(todosLosProductos.map(p => p.linea).filter(Boolean))].sort();
-    const sel = document.getElementById('filter-linea');
-    sel.innerHTML = '<option value="">Todas las líneas</option>';
-    lineas.forEach(l => {
-      const o = document.createElement('option'); o.value = l; o.textContent = l; sel.appendChild(o);
-    });
-  }
-
-  function filtrar() {
-    const linea = document.getElementById('filter-linea').value;
-    const busqueda = document.getElementById('search').value.toLowerCase();
-
-    const selSub = document.getElementById('filter-sublinea');
-    if (linea) {
-      const subs = [...new Set(todosLosProductos.filter(p => p.linea === linea).map(p => p.sublinea).filter(Boolean))].sort();
-      const current = selSub.value;
-      selSub.innerHTML = '<option value="">Todas las sublíneas</option>';
-      subs.forEach(s => { const o = document.createElement('option'); o.value=s; o.textContent=s; selSub.appendChild(o); });
-      if (subs.includes(current)) selSub.value = current;
-    } else {
-      selSub.innerHTML = '<option value="">Todas las sublíneas</option>';
-    }
-
-    const sublinea = selSub.value;
-    const resultado = todosLosProductos.filter(p => {
-      if (linea && p.linea !== linea) return false;
-      if (sublinea && p.sublinea !== sublinea) return false;
-      if (busqueda && !p.nombre.toLowerCase().includes(busqueda) && !p.sku.toLowerCase().includes(busqueda)) return false;
-      return true;
-    });
-
-    document.getElementById('results-count').textContent = resultado.length + ' productos';
-    const grid = document.getElementById('grid');
-
-    if (resultado.length === 0) {
-      grid.innerHTML = '<div class="empty-state">No se encontraron productos con esos filtros.</div>';
-      return;
-    }
-
-    grid.innerHTML = resultado.map(p => `
-      <div class="card">
-        ${p.foto
-          ? `<img class="card-img" src="${p.foto}" alt="${p.nombre}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
-          : ''}
-        <div class="card-img-placeholder" ${p.foto ? 'style="display:none"' : ''}>🏺</div>
-        <div class="card-body">
-          <div class="card-sku">SKU: ${p.sku}</div>
-          <div class="card-name">${p.nombre}</div>
-          <div class="card-tags">
-            ${p.linea ? `<span class="tag">${p.linea}</span>` : ''}
-            ${p.sublinea ? `<span class="tag">${p.sublinea}</span>` : ''}
-          </div>
-        </div>
+  <!-- Header de marca -->
+  <header class="brand-header">
+    <div class="brand-content">
+      <div class="logo">J</div>
+      <div class="brand-text">
+        <h1>Portafolio Decora</h1>
+        <p>Catálogo y disponibilidad por tienda</p>
       </div>
-    `).join('');
-  }
+    </div>
+  </header>
 
-  cargarProductos();
-</script>
+  <!-- Barra de tienda (sticky) -->
+  <section class="store-bar">
+    <div class="store-bar-content">
+      <div class="store-selector-group">
+        <span class="label">📍 Estás viendo:</span>
+        <select id="filtro-tienda" class="store-select">
+          <option value="">Todas las tiendas</option>
+        </select>
+      </div>
+      <div class="last-update">
+        <span class="dot"></span>
+        <span>Datos en vivo · Sincronizado <span id="last-update-text">--</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats-bar">
+    <div class="stats-content">
+      <div class="stat">
+        <span class="stat-value" id="stat-productos">--</span>
+        <span class="stat-label">Productos disponibles</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-tiendas">--</span>
+        <span class="stat-label">Tiendas</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="stat-unidades">--</span>
+        <span class="stat-label">Unidades en stock</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Filtros (sticky) -->
+  <section class="filters-bar">
+    <div class="filters-content">
+      <div class="filter-search">
+        <input type="search" id="filtro-busqueda" placeholder="Buscar por SKU o nombre…" autocomplete="off">
+      </div>
+      <select id="filtro-linea" class="filter-select">
+        <option value="">Todas las líneas</option>
+      </select>
+      <select id="filtro-sublinea" class="filter-select">
+        <option value="">Todas las sublíneas</option>
+      </select>
+      <select id="filtro-orden" class="filter-select">
+        <option value="nombre-asc">Nombre A–Z</option>
+        <option value="nombre-desc">Nombre Z–A</option>
+        <option value="stock-desc">Más stock primero</option>
+        <option value="stock-asc">Menos stock primero</option>
+      </select>
+    </div>
+    <div class="active-chips" id="active-chips"></div>
+  </section>
+
+  <!-- Resultados -->
+  <main class="results">
+    <div class="results-header" id="results-count">Cargando…</div>
+
+    <div class="loading-grid" id="loading">
+      <div class="loading-card"></div>
+      <div class="loading-card"></div>
+      <div class="loading-card"></div>
+      <div class="loading-card"></div>
+      <div class="loading-card"></div>
+      <div class="loading-card"></div>
+    </div>
+
+    <div class="grid" id="grid" hidden></div>
+
+    <div class="empty-state" id="empty-state" hidden>
+      <div class="empty-icon">🔍</div>
+      <h3>No encontramos productos</h3>
+      <p>Probá quitar algunos filtros o cambiar la búsqueda.</p>
+      <button class="btn-clear" id="btn-clear-all">Limpiar todos los filtros</button>
+    </div>
+  </main>
+
+  <footer>
+    Portafolio Decora · Inventario en tiempo real desde Google Sheets
+  </footer>
+
+  <script>
+    // =========================================================
+    // CONFIGURACIÓN — solo cambiar las URLs si las hojas cambian
+    // =========================================================
+    const URL_CATALOGO   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQmWJ44LQGwvFPIr5JJQ0JSKkLbK8z8u3KBcgMK3LApd1Qso1aEHqhxtMbNHadOW0Exu5NUrHCrgHHR/pub?gid=0&single=true&output=csv";
+    const URL_INVENTARIO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQmWJ44LQGwvFPIr5JJQ0JSKkLbK8z8u3KBcgMK3LApd1Qso1aEHqhxtMbNHadOW0Exu5NUrHCrgHHR/pub?gid=1787664807&single=true&output=csv";
+
+    // Umbral para que el badge se ponga en amarillo (poco stock)
+    const UMBRAL_POCO_STOCK = 10;
+
+    // =========================================================
+    // ESTADO GLOBAL
+    // =========================================================
+    let productos = []; // {sku, nombre, linea, sublinea, foto, stockTotal, stockPorTienda}
+    let tiendas   = []; // ['Tienda A', 'Tienda B', ...]
+
+    // =========================================================
+    // HELPERS
+    // =========================================================
+    function normalizarSKU(s) {
+      return String(s || '').trim().toUpperCase();
+    }
+
+    function parseNumero(s) {
+      const limpio = String(s || '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+      const n = Number(limpio);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // CSV parser que maneja comillas y comas dentro de campos
+    function parseCSV(text) {
+      const rows = [];
+      let row = [], cell = '', inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQuotes) {
+          if (c === '"' && text[i+1] === '"') { cell += '"'; i++; }
+          else if (c === '"') { inQuotes = false; }
+          else { cell += c; }
+        } else {
+          if (c === '"') { inQuotes = true; }
+          else if (c === ',') { row.push(cell); cell = ''; }
+          else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+          else if (c === '\r') { /* skip */ }
+          else { cell += c; }
+        }
+      }
+      if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+      if (rows.length === 0) return [];
+      const headers = rows[0].map(h => h.trim());
+      return rows.slice(1)
+        .filter(r => r.some(v => v && v.trim()))
+        .map(r => {
+          const obj = {};
+          headers.forEach((h, i) => obj[h] = (r[i] || '').trim());
+          return obj;
+        });
+    }
+
+    // Buscar valor en una fila tolerando tildes, mayúsculas y espacios
+    function getCol(row, ...nombresPosibles) {
+      const norm = s => String(s || '').toLowerCase()
+        .replace(/\s+/g, '')
+        .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
+        .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u');
+      const keys = Object.keys(row);
+      for (const target of nombresPosibles) {
+        const t = norm(target);
+        for (const k of keys) {
+          if (norm(k) === t) return row[k];
+        }
+      }
+      return '';
+    }
+
+    // =========================================================
+    // CARGA DE DATOS
+    // =========================================================
+    async function cargarDatos() {
+      // Si todavía no se pegó la URL del inventario, mostrar banner de setup
+      if (URL_INVENTARIO === "PEGAR_AQUI_LA_URL_DE_LA_HOJA_INVENTARIO") {
+        mostrarBannerSetup();
+        return;
+      }
+
+      try {
+        const [textCatalogo, textInventario] = await Promise.all([
+          fetch(URL_CATALOGO).then(r => r.text()),
+          fetch(URL_INVENTARIO).then(r => r.text())
+        ]);
+
+        const filasCatalogo   = parseCSV(textCatalogo);
+        const filasInventario = parseCSV(textInventario);
+
+        // Catálogo: mapa por SKU con info del producto
+        const catalogo = {};
+        for (const row of filasCatalogo) {
+          const sku = normalizarSKU(getCol(row, 'SKU', 'Codigo', 'Material'));
+          if (!sku) continue;
+          catalogo[sku] = {
+            nombre:   getCol(row, 'Nombre', 'Descripcion', 'Descripción'),
+            linea:    getCol(row, 'Linea', 'Línea'),
+            sublinea: getCol(row, 'Sublinea', 'Sublínea'),
+            foto:     getCol(row, 'Foto', 'Imagen', 'URL'),
+          };
+        }
+
+        // Inventario: agrupar cantidades por SKU y tienda
+        const stockPorSku = {};
+        const setTiendas  = new Set();
+        for (const row of filasInventario) {
+          const sku      = normalizarSKU(getCol(row, 'Material', 'SKU', 'Codigo'));
+          const tienda   = (getCol(row, 'Nombre 1', 'Tienda', 'Nombre1') || '').trim();
+          const cantidad = parseNumero(getCol(row, 'Libre utilización', 'Libre utilizacion', 'Cantidad', 'Stock', 'Disponible'));
+
+          if (!sku || !tienda || cantidad <= 0) continue;
+
+          setTiendas.add(tienda);
+          if (!stockPorSku[sku]) stockPorSku[sku] = { porTienda: {}, total: 0 };
+          stockPorSku[sku].porTienda[tienda] = (stockPorSku[sku].porTienda[tienda] || 0) + cantidad;
+          stockPorSku[sku].total += cantidad;
+        }
+
+        // Cruce: solo productos que TIENEN stock Y existen en el catálogo
+        productos = [];
+        for (const sku in stockPorSku) {
+          const info = catalogo[sku];
+          if (!info) continue; // SKU sin info de catálogo → omitir
+          productos.push({
+            sku,
+            nombre:        info.nombre || sku,
+            linea:         info.linea || '',
+            sublinea:      info.sublinea || '',
+            foto:          info.foto || '',
+            stockTotal:    stockPorSku[sku].total,
+            stockPorTienda: stockPorSku[sku].porTienda
+          });
+        }
+
+        tiendas = [...setTiendas].sort((a, b) => a.localeCompare(b));
+
+        document.getElementById('loading').remove();
+        document.getElementById('grid').hidden = false;
+
+        poblarFiltros();
+        renderUltimaActualizacion();
+        aplicarFiltros();
+
+      } catch (err) {
+        console.error(err);
+        mostrarError(err);
+      }
+    }
+
+    function mostrarError(err) {
+      const loading = document.getElementById('loading');
+      if (loading) loading.remove();
+      const empty = document.getElementById('empty-state');
+      empty.hidden = false;
+      empty.innerHTML = `
+        <div class="empty-icon">⚠️</div>
+        <h3>No pudimos cargar los datos</h3>
+        <p>Verificá que las dos hojas (catálogo e inventario) estén publicadas como CSV.<br>Detalle técnico: ${escapeHtml(err.message)}</p>
+      `;
+      document.getElementById('results-count').textContent = '';
+    }
+
+    function mostrarBannerSetup() {
+      const banner = document.createElement('div');
+      banner.className = 'setup-banner';
+      banner.innerHTML = `
+        ⚙️ <strong>Falta configurar la URL del inventario.</strong><br>
+        Editá el archivo <code>index.html</code> y reemplazá <code>PEGAR_AQUI_LA_URL_DE_LA_HOJA_INVENTARIO</code> por la URL pública de tu hoja "inventario".
+      `;
+      document.body.insertBefore(banner, document.body.firstChild);
+      const loading = document.getElementById('loading');
+      if (loading) loading.remove();
+      document.getElementById('results-count').textContent = '';
+    }
+
+    // =========================================================
+    // UI: poblar dropdowns y "última actualización"
+    // =========================================================
+    function poblarFiltros() {
+      const filtroTienda = document.getElementById('filtro-tienda');
+      filtroTienda.innerHTML = '<option value="">Todas las tiendas</option>' +
+        tiendas.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+
+      const lineas = [...new Set(productos.map(p => p.linea).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+      document.getElementById('filtro-linea').innerHTML = '<option value="">Todas las líneas</option>' +
+        lineas.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+
+      const sublineas = [...new Set(productos.map(p => p.sublinea).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+      document.getElementById('filtro-sublinea').innerHTML = '<option value="">Todas las sublíneas</option>' +
+        sublineas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    }
+
+    function renderUltimaActualizacion() {
+      const ahora = new Date();
+      const fecha = ahora.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' });
+      const hora  = ahora.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('last-update-text').textContent = `${fecha} · ${hora}`;
+    }
+
+    // =========================================================
+    // FILTRADO Y ORDEN
+    // =========================================================
+    function aplicarFiltros() {
+      const tienda    = document.getElementById('filtro-tienda').value;
+      const linea     = document.getElementById('filtro-linea').value;
+      const sublinea  = document.getElementById('filtro-sublinea').value;
+      const busqueda  = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
+      const orden     = document.getElementById('filtro-orden').value;
+
+      let resultado = productos.filter(p => {
+        if (linea    && p.linea    !== linea)    return false;
+        if (sublinea && p.sublinea !== sublinea) return false;
+        if (busqueda) {
+          const t = `${p.nombre} ${p.sku}`.toLowerCase();
+          if (!t.includes(busqueda)) return false;
+        }
+        if (tienda) {
+          const stockEnTienda = p.stockPorTienda[tienda] || 0;
+          if (stockEnTienda <= 0) return false;
+        }
+        return true;
+      });
+
+      resultado.sort((a, b) => {
+        const stockA = tienda ? (a.stockPorTienda[tienda] || 0) : a.stockTotal;
+        const stockB = tienda ? (b.stockPorTienda[tienda] || 0) : b.stockTotal;
+        switch (orden) {
+          case 'nombre-desc': return b.nombre.localeCompare(a.nombre);
+          case 'stock-desc':  return stockB - stockA;
+          case 'stock-asc':   return stockA - stockB;
+          default:            return a.nombre.localeCompare(b.nombre);
+        }
+      });
+
+      renderGrid(resultado, tienda);
+      renderChips({ tienda, linea, sublinea, busqueda });
+      renderStats(resultado, tienda);
+    }
+
+    // =========================================================
+    // RENDER: grid de productos
+    // =========================================================
+    function renderGrid(lista, tienda) {
+      const grid  = document.getElementById('grid');
+      const empty = document.getElementById('empty-state');
+
+      if (lista.length === 0) {
+        grid.innerHTML = '';
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+
+      grid.innerHTML = lista.map(p => {
+        const stockMostrar = tienda ? (p.stockPorTienda[tienda] || 0) : p.stockTotal;
+        const claseStock   = stockMostrar > UMBRAL_POCO_STOCK ? 'high' : 'low';
+        const etiqueta     = tienda
+          ? `${stockMostrar.toLocaleString('es-CO')} disponibles`
+          : `${stockMostrar.toLocaleString('es-CO')} en total`;
+        const claseDetalle = tienda ? '' : 'detail';
+        const onClickAttr  = tienda ? '' : 'onclick="toggleDetalle(this)"';
+
+        const desglose = !tienda ? Object.entries(p.stockPorTienda)
+          .sort((a, b) => b[1] - a[1])
+          .map(([t, c]) => `<div class="row"><span>${escapeHtml(t)}</span><b>${c.toLocaleString('es-CO')}</b></div>`)
+          .join('') : '';
+
+        const fotoHtml = p.foto
+          ? `<img src="${escapeHtml(p.foto)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.outerHTML='<span class=&quot;placeholder&quot;>🪴</span>'">`
+          : `<span class="placeholder">🪴</span>`;
+
+        return `
+          <article class="card">
+            <div class="card-image">${fotoHtml}</div>
+            <div class="card-body">
+              <span class="card-sku">${escapeHtml(p.sku)}</span>
+              <h3 class="card-name">${escapeHtml(p.nombre)}</h3>
+              <span class="stock-badge ${claseStock} ${claseDetalle}" ${onClickAttr}>${etiqueta}</span>
+              <div class="card-tags">
+                ${p.linea    ? `<span class="tag">${escapeHtml(p.linea)}</span>` : ''}
+                ${p.sublinea ? `<span class="tag">${escapeHtml(p.sublinea)}</span>` : ''}
+              </div>
+            </div>
+            ${desglose ? `<div class="stock-detail"><h4>Stock por tienda</h4>${desglose}</div>` : ''}
+          </article>
+        `;
+      }).join('');
+    }
+
+    function renderChips({ tienda, linea, sublinea, busqueda }) {
+      const cont = document.getElementById('active-chips');
+      const items = [];
+      if (tienda)    items.push({ label: `📍 ${tienda}`,        clear: 'filtro-tienda' });
+      if (linea)     items.push({ label: `Línea: ${linea}`,     clear: 'filtro-linea' });
+      if (sublinea)  items.push({ label: `Sublínea: ${sublinea}`, clear: 'filtro-sublinea' });
+      if (busqueda)  items.push({ label: `🔍 "${busqueda}"`,    clear: 'filtro-busqueda' });
+
+      cont.innerHTML = items.map((it, i) =>
+        `<span class="chip" data-target="${it.clear}">${escapeHtml(it.label)}<span class="x">✕</span></span>`
+      ).join('');
+
+      cont.querySelectorAll('.chip').forEach(el => {
+        el.addEventListener('click', () => {
+          const target = el.dataset.target;
+          const input = document.getElementById(target);
+          if (input.tagName === 'SELECT') input.selectedIndex = 0;
+          else input.value = '';
+          aplicarFiltros();
+        });
+      });
+    }
+
+    function renderStats(lista, tienda) {
+      const totalProductos = lista.length;
+      const totalUnidades = lista.reduce((s, p) =>
+        s + (tienda ? (p.stockPorTienda[tienda] || 0) : p.stockTotal), 0);
+
+      document.getElementById('stat-productos').textContent = totalProductos.toLocaleString('es-CO');
+      document.getElementById('stat-tiendas').textContent   = tienda ? '1' : tiendas.length.toLocaleString('es-CO');
+      document.getElementById('stat-unidades').textContent  = totalUnidades.toLocaleString('es-CO');
+
+      const txt = `Mostrando <strong>${totalProductos.toLocaleString('es-CO')}</strong> producto${totalProductos === 1 ? '' : 's'}` +
+                  (tienda ? ` en <strong>${escapeHtml(tienda)}</strong>` : ' en <strong>todas las tiendas</strong>');
+      document.getElementById('results-count').innerHTML = txt;
+    }
+
+    // =========================================================
+    // POPOVER de stock por tienda (vista "Todas las tiendas")
+    // =========================================================
+    function toggleDetalle(badge) {
+      const card   = badge.closest('.card');
+      const detail = card.querySelector('.stock-detail');
+      if (!detail) return;
+      document.querySelectorAll('.stock-detail.open').forEach(d => {
+        if (d !== detail) d.classList.remove('open');
+      });
+      detail.classList.toggle('open');
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.stock-badge.detail') && !e.target.closest('.stock-detail')) {
+        document.querySelectorAll('.stock-detail.open').forEach(d => d.classList.remove('open'));
+      }
+    });
+
+    // =========================================================
+    // EVENTOS
+    // =========================================================
+    document.addEventListener('DOMContentLoaded', () => {
+      cargarDatos();
+
+      ['filtro-tienda', 'filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
+        document.getElementById(id).addEventListener('change', aplicarFiltros);
+      });
+      document.getElementById('filtro-busqueda').addEventListener('input', aplicarFiltros);
+
+      document.getElementById('btn-clear-all').addEventListener('click', () => {
+        ['filtro-tienda', 'filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
+          document.getElementById(id).selectedIndex = 0;
+        });
+        document.getElementById('filtro-busqueda').value = '';
+        aplicarFiltros();
+      });
+    });
+
+    // Hacer toggleDetalle accesible desde el atributo onclick inline
+    window.toggleDetalle = toggleDetalle;
+  </script>
 </body>
 </html>
