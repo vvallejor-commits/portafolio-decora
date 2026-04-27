@@ -152,18 +152,19 @@
       position: absolute;
       top: calc(100% + 6px);
       left: 0;
-      min-width: 280px;
-      max-width: 360px;
+      min-width: 300px;
+      max-width: 380px;
       background: white;
       border: 1px solid var(--c-border);
       border-radius: var(--r-md);
       box-shadow: var(--shadow-lg);
       z-index: 30;
       overflow: hidden;
-      display: flex;
+      display: none;
       flex-direction: column;
-      max-height: 380px;
+      max-height: 420px;
     }
+    .combobox-panel.open { display: flex; }
     .combobox-search-wrap {
       padding: 10px 12px;
       border-bottom: 1px solid var(--c-border);
@@ -199,6 +200,7 @@
       align-items: center;
       gap: 10px;
       transition: background-color 0.1s;
+      user-select: none;
     }
     .combobox-option:hover {
       background: var(--c-brand-soft);
@@ -209,14 +211,35 @@
       color: var(--c-brand);
       background: var(--c-brand-soft);
     }
-    .combobox-option.selected::before {
-      content: '✓';
-      font-weight: 700;
+    .combobox-option .cb-mark {
+      width: 18px;
+      height: 18px;
+      border: 1.5px solid var(--c-border);
+      border-radius: 4px;
+      display: inline-grid;
+      place-items: center;
+      flex-shrink: 0;
+      background: white;
+      transition: all 0.15s;
     }
-    .combobox-option:not(.selected)::before {
-      content: '';
-      width: 8px;
-      display: inline-block;
+    .combobox-option.selected .cb-mark {
+      background: var(--c-brand);
+      border-color: var(--c-brand);
+      color: white;
+    }
+    .combobox-option.selected .cb-mark::before {
+      content: '✓';
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .combobox-option.opt-todas {
+      border-bottom: 1px solid var(--c-border);
+      margin-bottom: 4px;
+      padding-bottom: 11px;
+    }
+    .combobox-option.opt-todas .cb-mark {
+      border-radius: 50%;
     }
     .combobox-empty {
       padding: 20px 14px;
@@ -224,6 +247,43 @@
       color: var(--c-muted);
       font-size: 13px;
     }
+    .combobox-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-top: 1px solid var(--c-border);
+      background: var(--c-bg);
+      gap: 10px;
+    }
+    .combobox-link {
+      background: none;
+      border: none;
+      color: var(--c-muted);
+      font-family: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: var(--r-sm);
+      transition: color 0.15s;
+    }
+    .combobox-link:hover {
+      color: var(--c-brand);
+      background: var(--c-brand-soft);
+    }
+    .combobox-done {
+      background: var(--c-brand);
+      color: white;
+      border: none;
+      padding: 8px 18px;
+      border-radius: var(--r-sm);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .combobox-done:hover { background: var(--c-brand-dark); }
     @media (max-width: 720px) {
       .combobox-trigger { min-width: 100%; }
       .combobox-panel { left: 0; right: 0; min-width: 0; max-width: none; }
@@ -701,13 +761,16 @@
           <button type="button" class="store-select combobox-trigger" id="store-trigger" aria-haspopup="listbox" aria-expanded="false">
             <span id="store-trigger-label">Todas las tiendas</span>
           </button>
-          <div class="combobox-panel" id="store-panel" hidden>
+          <div class="combobox-panel" id="store-panel">
             <div class="combobox-search-wrap">
               <input type="search" id="store-search" placeholder="Escribe para buscar tienda…" autocomplete="off">
             </div>
-            <ul class="combobox-list" id="store-list" role="listbox"></ul>
+            <ul class="combobox-list" id="store-list" role="listbox" aria-multiselectable="true"></ul>
+            <div class="combobox-footer">
+              <button type="button" class="combobox-link" id="store-clear">Limpiar selección</button>
+              <button type="button" class="combobox-done" id="store-done">Listo</button>
+            </div>
           </div>
-          <input type="hidden" id="filtro-tienda" value="">
         </div>
       </div>
       <div class="last-update">
@@ -802,6 +865,7 @@
     // =========================================================
     let productos = []; // {sku, nombre, linea, sublinea, foto, stockTotal, stockPorTienda}
     let tiendas   = []; // ['Tienda A', 'Tienda B', ...]
+    let tiendasSeleccionadas = []; // selección múltiple; vacío = todas
 
     // =========================================================
     // HELPERS
@@ -988,59 +1052,87 @@
     }
 
     // =========================================================
-    // COMBOBOX DE TIENDA (con búsqueda)
+    // COMBOBOX DE TIENDA (multi-selección con búsqueda)
     // =========================================================
     function poblarTiendas() {
-      renderStoreList('');
-      setStoreValue('');
+      setStoreSelections([]);
+    }
+
+    function setStoreSelections(arr) {
+      tiendasSeleccionadas = Array.from(new Set(arr || []));
+      const label = document.getElementById('store-trigger-label');
+      if (tiendasSeleccionadas.length === 0) {
+        label.textContent = 'Todas las tiendas';
+      } else if (tiendasSeleccionadas.length === 1) {
+        label.textContent = tiendasSeleccionadas[0];
+      } else {
+        label.textContent = `${tiendasSeleccionadas.length} tiendas seleccionadas`;
+      }
+      // Refrescar lista si está abierta
+      const panel = document.getElementById('store-panel');
+      if (panel && panel.classList.contains('open')) {
+        const search = document.getElementById('store-search');
+        renderStoreList(search ? search.value : '');
+      }
     }
 
     function renderStoreList(filtro) {
       const f = (filtro || '').toLowerCase().trim();
-      const valorActual = document.getElementById('filtro-tienda').value;
-      const opciones = ['', ...tiendas]; // '' = Todas las tiendas
-
-      const norm = s => s.toLowerCase()
+      const norm = s => String(s || '').toLowerCase()
         .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
         .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u');
 
+      // Marcador especial '*' para "Todas las tiendas"
+      const opciones = ['*', ...tiendas];
       const filtradas = opciones.filter(opt => {
         if (!f) return true;
-        const label = opt === '' ? 'todas las tiendas' : opt;
+        const label = opt === '*' ? 'todas las tiendas' : opt;
         return norm(label).includes(norm(f));
       });
 
       const list = document.getElementById('store-list');
-
       if (filtradas.length === 0) {
         list.innerHTML = '<li class="combobox-empty">Sin coincidencias</li>';
         return;
       }
 
       list.innerHTML = filtradas.map(opt => {
-        const label = opt === '' ? 'Todas las tiendas' : opt;
-        const sel = opt === valorActual ? 'selected' : '';
-        return `<li class="combobox-option ${sel}" data-value="${escapeHtml(opt)}" role="option">${escapeHtml(label)}</li>`;
+        const esTodas = opt === '*';
+        const label = esTodas ? 'Todas las tiendas' : opt;
+        const isSelected = esTodas
+          ? tiendasSeleccionadas.length === 0
+          : tiendasSeleccionadas.includes(opt);
+        const cls = `combobox-option${isSelected ? ' selected' : ''}${esTodas ? ' opt-todas' : ''}`;
+        return `<li class="${cls}" data-value="${escapeHtml(opt)}" data-todas="${esTodas}" role="option" aria-selected="${isSelected}">
+          <span class="cb-mark"></span>
+          <span class="cb-label">${escapeHtml(label)}</span>
+        </li>`;
       }).join('');
 
       list.querySelectorAll('.combobox-option').forEach(el => {
-        el.addEventListener('click', () => {
-          setStoreValue(el.dataset.value);
-          closeStorePanel();
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const value = el.dataset.value;
+          const esTodas = el.dataset.todas === 'true';
+          if (esTodas) {
+            // "Todas" → limpia selección (= todas)
+            setStoreSelections([]);
+          } else {
+            const yaEsta = tiendasSeleccionadas.includes(value);
+            if (yaEsta) {
+              setStoreSelections(tiendasSeleccionadas.filter(x => x !== value));
+            } else {
+              setStoreSelections([...tiendasSeleccionadas, value]);
+            }
+          }
           aplicarFiltros();
+          // Importante: NO cerramos el panel para permitir seleccionar varias
         });
       });
     }
 
-    function setStoreValue(value) {
-      const label = value === '' ? 'Todas las tiendas' : value;
-      document.getElementById('store-trigger-label').textContent = label;
-      document.getElementById('filtro-tienda').value = value;
-    }
-
     function openStorePanel() {
-      const panel = document.getElementById('store-panel');
-      panel.hidden = false;
+      document.getElementById('store-panel').classList.add('open');
       document.getElementById('store-trigger').setAttribute('aria-expanded', 'true');
       const search = document.getElementById('store-search');
       search.value = '';
@@ -1049,7 +1141,7 @@
     }
 
     function closeStorePanel() {
-      document.getElementById('store-panel').hidden = true;
+      document.getElementById('store-panel').classList.remove('open');
       document.getElementById('store-trigger').setAttribute('aria-expanded', 'false');
     }
 
@@ -1064,11 +1156,15 @@
     // FILTRADO Y ORDEN
     // =========================================================
     function aplicarFiltros() {
-      const tienda    = document.getElementById('filtro-tienda').value;
-      const linea     = document.getElementById('filtro-linea').value;
-      const sublinea  = document.getElementById('filtro-sublinea').value;
-      const busqueda  = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
-      const orden     = document.getElementById('filtro-orden').value;
+      const tiendasSel = tiendasSeleccionadas.slice();
+      const linea      = document.getElementById('filtro-linea').value;
+      const sublinea   = document.getElementById('filtro-sublinea').value;
+      const busqueda   = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
+      const orden      = document.getElementById('filtro-orden').value;
+
+      const stockEnSel = (p) => tiendasSel.length === 0
+        ? p.stockTotal
+        : tiendasSel.reduce((s, t) => s + (p.stockPorTienda[t] || 0), 0);
 
       let resultado = productos.filter(p => {
         if (linea    && p.linea    !== linea)    return false;
@@ -1077,16 +1173,13 @@
           const t = `${p.nombre} ${p.sku}`.toLowerCase();
           if (!t.includes(busqueda)) return false;
         }
-        if (tienda) {
-          const stockEnTienda = p.stockPorTienda[tienda] || 0;
-          if (stockEnTienda <= 0) return false;
-        }
+        if (stockEnSel(p) <= 0) return false;
         return true;
       });
 
       resultado.sort((a, b) => {
-        const stockA = tienda ? (a.stockPorTienda[tienda] || 0) : a.stockTotal;
-        const stockB = tienda ? (b.stockPorTienda[tienda] || 0) : b.stockTotal;
+        const stockA = stockEnSel(a);
+        const stockB = stockEnSel(b);
         const cmpNum = { numeric: true, sensitivity: 'base' };
         switch (orden) {
           case 'sku-asc':     return a.sku.localeCompare(b.sku, undefined, cmpNum);
@@ -1099,15 +1192,15 @@
         }
       });
 
-      renderGrid(resultado, tienda);
-      renderChips({ tienda, linea, sublinea, busqueda });
-      renderStats(resultado, tienda);
+      renderGrid(resultado, tiendasSel);
+      renderChips({ tiendasSel, linea, sublinea, busqueda });
+      renderStats(resultado, tiendasSel);
     }
 
     // =========================================================
     // RENDER: grid de productos
     // =========================================================
-    function renderGrid(lista, tienda) {
+    function renderGrid(lista, tiendasSel) {
       const grid  = document.getElementById('grid');
       const empty = document.getElementById('empty-state');
 
@@ -1118,19 +1211,36 @@
       }
       empty.hidden = true;
 
+      // ¿Mostrar desglose por tienda? Sí cuando hay 0 ó 2+ tiendas seleccionadas.
+      const mostrarDesglose = tiendasSel.length !== 1;
+
       grid.innerHTML = lista.map(p => {
-        const stockMostrar = tienda ? (p.stockPorTienda[tienda] || 0) : p.stockTotal;
-        const claseStock   = stockMostrar > UMBRAL_POCO_STOCK ? 'high' : 'low';
-        const etiqueta     = tienda
+        const stockMostrar = tiendasSel.length === 0
+          ? p.stockTotal
+          : tiendasSel.reduce((s, t) => s + (p.stockPorTienda[t] || 0), 0);
+        const claseStock = stockMostrar > UMBRAL_POCO_STOCK ? 'high' : 'low';
+        const etiqueta = tiendasSel.length === 1
           ? `${stockMostrar.toLocaleString('es-CO')} disponibles`
           : `${stockMostrar.toLocaleString('es-CO')} en total`;
-        const claseDetalle = tienda ? '' : 'detail';
-        const onClickAttr  = tienda ? '' : 'onclick="toggleDetalle(this)"';
+        const claseDetalle = mostrarDesglose ? 'detail' : '';
+        const onClickAttr  = mostrarDesglose ? 'onclick="toggleDetalle(this)"' : '';
 
-        const desglose = !tienda ? Object.entries(p.stockPorTienda)
-          .sort((a, b) => b[1] - a[1])
-          .map(([t, c]) => `<div class="row"><span>${escapeHtml(t)}</span><b>${c.toLocaleString('es-CO')}</b></div>`)
-          .join('') : '';
+        let desglose = '';
+        if (mostrarDesglose) {
+          // Si hay tiendas seleccionadas, mostrar solo esas. Si no, todas.
+          let entradas;
+          if (tiendasSel.length === 0) {
+            entradas = Object.entries(p.stockPorTienda);
+          } else {
+            entradas = tiendasSel
+              .map(t => [t, p.stockPorTienda[t] || 0])
+              .filter(([_, c]) => c > 0);
+          }
+          entradas.sort((a, b) => b[1] - a[1]);
+          desglose = entradas
+            .map(([t, c]) => `<div class="row"><span>${escapeHtml(t)}</span><b>${c.toLocaleString('es-CO')}</b></div>`)
+            .join('');
+        }
 
         const fotoHtml = p.foto
           ? `<img src="${escapeHtml(p.foto)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.outerHTML='<span class=&quot;placeholder&quot;>🪴</span>'">`
@@ -1154,23 +1264,29 @@
       }).join('');
     }
 
-    function renderChips({ tienda, linea, sublinea, busqueda }) {
+    function renderChips({ tiendasSel, linea, sublinea, busqueda }) {
       const cont = document.getElementById('active-chips');
       const items = [];
-      if (tienda)    items.push({ label: `📍 ${tienda}`,        clear: 'filtro-tienda' });
-      if (linea)     items.push({ label: `Línea: ${linea}`,     clear: 'filtro-linea' });
-      if (sublinea)  items.push({ label: `Sublínea: ${sublinea}`, clear: 'filtro-sublinea' });
-      if (busqueda)  items.push({ label: `🔍 "${busqueda}"`,    clear: 'filtro-busqueda' });
 
-      cont.innerHTML = items.map((it, i) =>
-        `<span class="chip" data-target="${it.clear}">${escapeHtml(it.label)}<span class="x">✕</span></span>`
+      if (tiendasSel.length > 0) {
+        const label = tiendasSel.length === 1
+          ? `📍 ${tiendasSel[0]}`
+          : `📍 ${tiendasSel.length} tiendas`;
+        items.push({ label, target: 'tiendas-multi' });
+      }
+      if (linea)     items.push({ label: `Línea: ${linea}`,         target: 'filtro-linea' });
+      if (sublinea)  items.push({ label: `Sublínea: ${sublinea}`,   target: 'filtro-sublinea' });
+      if (busqueda)  items.push({ label: `🔍 "${busqueda}"`,        target: 'filtro-busqueda' });
+
+      cont.innerHTML = items.map(it =>
+        `<span class="chip" data-target="${it.target}">${escapeHtml(it.label)}<span class="x">✕</span></span>`
       ).join('');
 
       cont.querySelectorAll('.chip').forEach(el => {
         el.addEventListener('click', () => {
           const target = el.dataset.target;
-          if (target === 'filtro-tienda') {
-            setStoreValue('');
+          if (target === 'tiendas-multi') {
+            setStoreSelections([]);
           } else {
             const input = document.getElementById(target);
             if (input.tagName === 'SELECT') input.selectedIndex = 0;
@@ -1181,18 +1297,26 @@
       });
     }
 
-    function renderStats(lista, tienda) {
+    function renderStats(lista, tiendasSel) {
       const totalProductos = lista.length;
-      const totalUnidades = lista.reduce((s, p) =>
-        s + (tienda ? (p.stockPorTienda[tienda] || 0) : p.stockTotal), 0);
+      const totalUnidades = lista.reduce((s, p) => {
+        if (tiendasSel.length === 0) return s + p.stockTotal;
+        return s + tiendasSel.reduce((ss, t) => ss + (p.stockPorTienda[t] || 0), 0);
+      }, 0);
 
       document.getElementById('stat-productos').textContent = totalProductos.toLocaleString('es-CO');
-      document.getElementById('stat-tiendas').textContent   = tienda ? '1' : tiendas.length.toLocaleString('es-CO');
+      document.getElementById('stat-tiendas').textContent   = tiendasSel.length === 0
+        ? tiendas.length.toLocaleString('es-CO')
+        : tiendasSel.length.toLocaleString('es-CO');
       document.getElementById('stat-unidades').textContent  = totalUnidades.toLocaleString('es-CO');
 
-      const txt = `Mostrando <strong>${totalProductos.toLocaleString('es-CO')}</strong> producto${totalProductos === 1 ? '' : 's'}` +
-                  (tienda ? ` en <strong>${escapeHtml(tienda)}</strong>` : ' en <strong>todas las tiendas</strong>');
-      document.getElementById('results-count').innerHTML = txt;
+      let scope;
+      if (tiendasSel.length === 0)      scope = 'en <strong>todas las tiendas</strong>';
+      else if (tiendasSel.length === 1) scope = `en <strong>${escapeHtml(tiendasSel[0])}</strong>`;
+      else                              scope = `en <strong>${tiendasSel.length} tiendas seleccionadas</strong>`;
+
+      document.getElementById('results-count').innerHTML =
+        `Mostrando <strong>${totalProductos.toLocaleString('es-CO')}</strong> producto${totalProductos === 1 ? '' : 's'} ${scope}`;
     }
 
     // =========================================================
@@ -1231,25 +1355,34 @@
       });
       document.getElementById('filtro-busqueda').addEventListener('input', aplicarFiltros);
 
-      // Combobox de tienda
+      // Combobox de tienda (multi-select)
       document.getElementById('store-trigger').addEventListener('click', (e) => {
         e.stopPropagation();
         const panel = document.getElementById('store-panel');
-        if (panel.hidden) openStorePanel();
-        else closeStorePanel();
+        if (panel.classList.contains('open')) closeStorePanel();
+        else openStorePanel();
       });
       document.getElementById('store-search').addEventListener('input', (e) => {
         renderStoreList(e.target.value);
       });
       document.getElementById('store-search').addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
+          e.preventDefault();
           closeStorePanel();
           document.getElementById('store-trigger').focus();
         } else if (e.key === 'Enter') {
-          const first = document.querySelector('#store-list .combobox-option');
-          if (first) first.click();
           e.preventDefault();
+          closeStorePanel();
         }
+      });
+      document.getElementById('store-done').addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeStorePanel();
+      });
+      document.getElementById('store-clear').addEventListener('click', (e) => {
+        e.stopPropagation();
+        setStoreSelections([]);
+        aplicarFiltros();
       });
 
       // Limpiar filtros (botón en barra y en estado vacío)
@@ -1258,7 +1391,7 @@
           document.getElementById(id).selectedIndex = 0;
         });
         document.getElementById('filtro-busqueda').value = '';
-        setStoreValue('');
+        setStoreSelections([]);
         aplicarFiltros();
       };
       document.getElementById('btn-clear-all').addEventListener('click', limpiarTodo);
