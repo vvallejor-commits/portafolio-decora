@@ -134,6 +134,100 @@
       transition: background-color 0.15s;
     }
     .store-select:hover { background-color: white; }
+
+    /* Combobox de tienda con búsqueda */
+    .combobox {
+      position: relative;
+      display: inline-block;
+    }
+    .combobox-trigger {
+      text-align: left;
+      min-width: 220px;
+      font-family: inherit;
+    }
+    .combobox-trigger[aria-expanded="true"] {
+      background-color: white;
+    }
+    .combobox-panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      min-width: 280px;
+      max-width: 360px;
+      background: white;
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 30;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 380px;
+    }
+    .combobox-search-wrap {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--c-border);
+      background: var(--c-bg);
+    }
+    .combobox-search-wrap input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-sm);
+      font-family: inherit;
+      font-size: 14px;
+      background: white;
+    }
+    .combobox-search-wrap input:focus {
+      outline: none;
+      border-color: var(--c-brand);
+      box-shadow: 0 0 0 3px var(--c-brand-soft);
+    }
+    .combobox-list {
+      list-style: none;
+      margin: 0;
+      padding: 4px 0;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .combobox-option {
+      padding: 9px 14px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--c-text);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background-color 0.1s;
+    }
+    .combobox-option:hover {
+      background: var(--c-brand-soft);
+      color: var(--c-brand-dark);
+    }
+    .combobox-option.selected {
+      font-weight: 600;
+      color: var(--c-brand);
+      background: var(--c-brand-soft);
+    }
+    .combobox-option.selected::before {
+      content: '✓';
+      font-weight: 700;
+    }
+    .combobox-option:not(.selected)::before {
+      content: '';
+      width: 8px;
+      display: inline-block;
+    }
+    .combobox-empty {
+      padding: 20px 14px;
+      text-align: center;
+      color: var(--c-muted);
+      font-size: 13px;
+    }
+    @media (max-width: 720px) {
+      .combobox-trigger { min-width: 100%; }
+      .combobox-panel { left: 0; right: 0; min-width: 0; max-width: none; }
+    }
     .last-update {
       font-size: 13px;
       color: var(--c-muted);
@@ -603,9 +697,18 @@
     <div class="store-bar-content">
       <div class="store-selector-group">
         <span class="label">📍 Estás viendo:</span>
-        <select id="filtro-tienda" class="store-select">
-          <option value="">Todas las tiendas</option>
-        </select>
+        <div class="combobox" id="store-combobox">
+          <button type="button" class="store-select combobox-trigger" id="store-trigger" aria-haspopup="listbox" aria-expanded="false">
+            <span id="store-trigger-label">Todas las tiendas</span>
+          </button>
+          <div class="combobox-panel" id="store-panel" hidden>
+            <div class="combobox-search-wrap">
+              <input type="search" id="store-search" placeholder="Escribe para buscar tienda…" autocomplete="off">
+            </div>
+            <ul class="combobox-list" id="store-list" role="listbox"></ul>
+          </div>
+          <input type="hidden" id="filtro-tienda" value="">
+        </div>
       </div>
       <div class="last-update">
         <span class="dot"></span>
@@ -872,9 +975,8 @@
     // UI: poblar dropdowns y "última actualización"
     // =========================================================
     function poblarFiltros() {
-      const filtroTienda = document.getElementById('filtro-tienda');
-      filtroTienda.innerHTML = '<option value="">Todas las tiendas</option>' +
-        tiendas.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+      // Combobox de tiendas
+      poblarTiendas();
 
       const lineas = [...new Set(productos.map(p => p.linea).filter(Boolean))].sort((a, b) => a.localeCompare(b));
       document.getElementById('filtro-linea').innerHTML = '<option value="">Todas las líneas</option>' +
@@ -883,6 +985,72 @@
       const sublineas = [...new Set(productos.map(p => p.sublinea).filter(Boolean))].sort((a, b) => a.localeCompare(b));
       document.getElementById('filtro-sublinea').innerHTML = '<option value="">Todas las sublíneas</option>' +
         sublineas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    }
+
+    // =========================================================
+    // COMBOBOX DE TIENDA (con búsqueda)
+    // =========================================================
+    function poblarTiendas() {
+      renderStoreList('');
+      setStoreValue('');
+    }
+
+    function renderStoreList(filtro) {
+      const f = (filtro || '').toLowerCase().trim();
+      const valorActual = document.getElementById('filtro-tienda').value;
+      const opciones = ['', ...tiendas]; // '' = Todas las tiendas
+
+      const norm = s => s.toLowerCase()
+        .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
+        .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u');
+
+      const filtradas = opciones.filter(opt => {
+        if (!f) return true;
+        const label = opt === '' ? 'todas las tiendas' : opt;
+        return norm(label).includes(norm(f));
+      });
+
+      const list = document.getElementById('store-list');
+
+      if (filtradas.length === 0) {
+        list.innerHTML = '<li class="combobox-empty">Sin coincidencias</li>';
+        return;
+      }
+
+      list.innerHTML = filtradas.map(opt => {
+        const label = opt === '' ? 'Todas las tiendas' : opt;
+        const sel = opt === valorActual ? 'selected' : '';
+        return `<li class="combobox-option ${sel}" data-value="${escapeHtml(opt)}" role="option">${escapeHtml(label)}</li>`;
+      }).join('');
+
+      list.querySelectorAll('.combobox-option').forEach(el => {
+        el.addEventListener('click', () => {
+          setStoreValue(el.dataset.value);
+          closeStorePanel();
+          aplicarFiltros();
+        });
+      });
+    }
+
+    function setStoreValue(value) {
+      const label = value === '' ? 'Todas las tiendas' : value;
+      document.getElementById('store-trigger-label').textContent = label;
+      document.getElementById('filtro-tienda').value = value;
+    }
+
+    function openStorePanel() {
+      const panel = document.getElementById('store-panel');
+      panel.hidden = false;
+      document.getElementById('store-trigger').setAttribute('aria-expanded', 'true');
+      const search = document.getElementById('store-search');
+      search.value = '';
+      renderStoreList('');
+      setTimeout(() => search.focus(), 30);
+    }
+
+    function closeStorePanel() {
+      document.getElementById('store-panel').hidden = true;
+      document.getElementById('store-trigger').setAttribute('aria-expanded', 'false');
     }
 
     function renderUltimaActualizacion() {
@@ -1001,9 +1169,13 @@
       cont.querySelectorAll('.chip').forEach(el => {
         el.addEventListener('click', () => {
           const target = el.dataset.target;
-          const input = document.getElementById(target);
-          if (input.tagName === 'SELECT') input.selectedIndex = 0;
-          else input.value = '';
+          if (target === 'filtro-tienda') {
+            setStoreValue('');
+          } else {
+            const input = document.getElementById(target);
+            if (input.tagName === 'SELECT') input.selectedIndex = 0;
+            else input.value = '';
+          }
           aplicarFiltros();
         });
       });
@@ -1037,8 +1209,13 @@
     }
 
     document.addEventListener('click', (e) => {
+      // Cerrar popovers de stock detail al click fuera
       if (!e.target.closest('.stock-badge.detail') && !e.target.closest('.stock-detail')) {
         document.querySelectorAll('.stock-detail.open').forEach(d => d.classList.remove('open'));
+      }
+      // Cerrar combobox de tienda al click fuera
+      if (!e.target.closest('#store-combobox')) {
+        closeStorePanel();
       }
     });
 
@@ -1048,16 +1225,40 @@
     document.addEventListener('DOMContentLoaded', () => {
       cargarDatos();
 
-      ['filtro-tienda', 'filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
+      // Filtros tradicionales (selects e input)
+      ['filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
         document.getElementById(id).addEventListener('change', aplicarFiltros);
       });
       document.getElementById('filtro-busqueda').addEventListener('input', aplicarFiltros);
 
+      // Combobox de tienda
+      document.getElementById('store-trigger').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const panel = document.getElementById('store-panel');
+        if (panel.hidden) openStorePanel();
+        else closeStorePanel();
+      });
+      document.getElementById('store-search').addEventListener('input', (e) => {
+        renderStoreList(e.target.value);
+      });
+      document.getElementById('store-search').addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeStorePanel();
+          document.getElementById('store-trigger').focus();
+        } else if (e.key === 'Enter') {
+          const first = document.querySelector('#store-list .combobox-option');
+          if (first) first.click();
+          e.preventDefault();
+        }
+      });
+
+      // Limpiar filtros (botón en barra y en estado vacío)
       const limpiarTodo = () => {
-        ['filtro-tienda', 'filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
+        ['filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
           document.getElementById(id).selectedIndex = 0;
         });
         document.getElementById('filtro-busqueda').value = '';
+        setStoreValue('');
         aplicarFiltros();
       };
       document.getElementById('btn-clear-all').addEventListener('click', limpiarTodo);
