@@ -636,6 +636,78 @@
     .stock-detail .row b { font-weight: 700; }
 
     /* =========================================================
+       PAGINACIÓN
+       ========================================================= */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 36px;
+      padding: 18px 16px;
+      border-top: 1px solid var(--c-border);
+      flex-wrap: wrap;
+    }
+    .page-btn {
+      background: white;
+      border: 1px solid var(--c-border);
+      padding: 9px 18px;
+      border-radius: var(--r-sm);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--c-text);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .page-btn:hover:not(:disabled) {
+      border-color: var(--c-brand);
+      color: var(--c-brand);
+      background: var(--c-brand-soft);
+    }
+    .page-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+    .page-info {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--c-muted);
+    }
+    .page-range-text strong { color: var(--c-text); font-weight: 600; }
+    .page-jump {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .page-jump strong { color: var(--c-text); font-weight: 600; }
+    .page-input {
+      width: 64px;
+      padding: 6px 8px;
+      border: 1px solid var(--c-border);
+      border-radius: var(--r-sm);
+      font-family: inherit;
+      font-size: 14px;
+      text-align: center;
+      font-weight: 600;
+      color: var(--c-text);
+      background: white;
+    }
+    .page-input:focus {
+      outline: none;
+      border-color: var(--c-brand);
+      box-shadow: 0 0 0 3px var(--c-brand-soft);
+    }
+    @media (max-width: 600px) {
+      .pagination { gap: 10px; padding: 14px 8px; }
+      .page-btn { padding: 9px 12px; font-size: 13px; }
+      .page-info { font-size: 12px; }
+    }
+
+    /* =========================================================
        ESTADO VACÍO Y CARGA
        ========================================================= */
     .empty-state {
@@ -838,6 +910,19 @@
 
     <div class="grid" id="grid" hidden></div>
 
+    <nav class="pagination" id="pagination" hidden aria-label="Paginación">
+      <button type="button" class="page-btn" id="page-prev">← Anterior</button>
+      <div class="page-info">
+        <span class="page-range-text">Mostrando <strong id="page-range">–</strong></span>
+        <span class="page-jump">
+          Página
+          <input type="number" id="page-input" min="1" value="1" class="page-input" aria-label="Ir a página">
+          de <strong id="page-total">1</strong>
+        </span>
+      </div>
+      <button type="button" class="page-btn" id="page-next">Siguiente →</button>
+    </nav>
+
     <div class="empty-state" id="empty-state" hidden>
       <div class="empty-icon">🔍</div>
       <h3>No encontramos productos</h3>
@@ -860,12 +945,17 @@
     // Umbral para que el badge se ponga en amarillo (poco stock)
     const UMBRAL_POCO_STOCK = 10;
 
+    // Cuántos productos por página
+    const PAGE_SIZE = 36;
+
     // =========================================================
     // ESTADO GLOBAL
     // =========================================================
     let productos = []; // {sku, nombre, linea, sublinea, foto, stockTotal, stockPorTienda}
     let tiendas   = []; // ['Tienda A', 'Tienda B', ...]
     let tiendasSeleccionadas = []; // selección múltiple; vacío = todas
+    let resultadoActual = []; // resultado completo filtrado y ordenado
+    let paginaActual = 1;
 
     // =========================================================
     // HELPERS
@@ -882,6 +972,11 @@
 
     function escapeHtml(s) {
       return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    // Quita tildes y pasa a minúsculas para búsquedas tolerantes
+    function normalizarTexto(s) {
+      return String(s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
     }
 
     // CSV parser que maneja comillas y comas dentro de campos
@@ -1155,12 +1250,18 @@
     // =========================================================
     // FILTRADO Y ORDEN
     // =========================================================
-    function aplicarFiltros() {
-      const tiendasSel = tiendasSeleccionadas.slice();
-      const linea      = document.getElementById('filtro-linea').value;
-      const sublinea   = document.getElementById('filtro-sublinea').value;
-      const busqueda   = document.getElementById('filtro-busqueda').value.toLowerCase().trim();
-      const orden      = document.getElementById('filtro-orden').value;
+    function aplicarFiltros(opciones = {}) {
+      const tiendasSel    = tiendasSeleccionadas.slice();
+      const linea         = document.getElementById('filtro-linea').value;
+      const sublinea      = document.getElementById('filtro-sublinea').value;
+      const busquedaRaw   = document.getElementById('filtro-busqueda').value.trim();
+      const busqueda      = busquedaRaw.toLowerCase();
+      const orden         = document.getElementById('filtro-orden').value;
+
+      // Tokens de búsqueda: cada palabra debe aparecer (en cualquier orden)
+      const tokens = busqueda
+        ? normalizarTexto(busqueda).split(/\s+/).filter(Boolean)
+        : [];
 
       const stockEnSel = (p) => tiendasSel.length === 0
         ? p.stockTotal
@@ -1169,9 +1270,9 @@
       let resultado = productos.filter(p => {
         if (linea    && p.linea    !== linea)    return false;
         if (sublinea && p.sublinea !== sublinea) return false;
-        if (busqueda) {
-          const t = `${p.nombre} ${p.sku}`.toLowerCase();
-          if (!t.includes(busqueda)) return false;
+        if (tokens.length) {
+          const haystack = normalizarTexto(`${p.nombre} ${p.sku} ${p.linea} ${p.sublinea}`);
+          if (!tokens.every(tok => haystack.includes(tok))) return false;
         }
         if (stockEnSel(p) <= 0) return false;
         return true;
@@ -1192,9 +1293,51 @@
         }
       });
 
-      renderGrid(resultado, tiendasSel);
-      renderChips({ tiendasSel, linea, sublinea, busqueda });
+      resultadoActual = resultado;
+      if (!opciones.mantenerPagina) paginaActual = 1;
+
+      renderChips({ tiendasSel, linea, sublinea, busqueda: busquedaRaw });
       renderStats(resultado, tiendasSel);
+      renderPagina();
+    }
+
+    function renderPagina() {
+      const total       = resultadoActual.length;
+      const totalPages  = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if (paginaActual > totalPages) paginaActual = totalPages;
+      if (paginaActual < 1)          paginaActual = 1;
+      const start  = (paginaActual - 1) * PAGE_SIZE;
+      const slice  = resultadoActual.slice(start, start + PAGE_SIZE);
+      renderGrid(slice, tiendasSeleccionadas);
+      renderPagination(paginaActual, totalPages, total);
+    }
+
+    function renderPagination(actual, total, totalItems) {
+      const nav = document.getElementById('pagination');
+      if (totalItems <= PAGE_SIZE) {
+        nav.hidden = true;
+        return;
+      }
+      nav.hidden = false;
+      document.getElementById('page-prev').disabled = actual <= 1;
+      document.getElementById('page-next').disabled = actual >= total;
+      const input = document.getElementById('page-input');
+      input.value = actual;
+      input.max   = total;
+      document.getElementById('page-total').textContent = total.toLocaleString('es-CO');
+      const desde = (actual - 1) * PAGE_SIZE + 1;
+      const hasta = Math.min(actual * PAGE_SIZE, totalItems);
+      document.getElementById('page-range').textContent = `${desde.toLocaleString('es-CO')}–${hasta.toLocaleString('es-CO')} de ${totalItems.toLocaleString('es-CO')}`;
+    }
+
+    function irAPagina(n) {
+      paginaActual = n;
+      renderPagina();
+      const top = document.querySelector('.results-header');
+      if (top) {
+        const y = top.getBoundingClientRect().top + window.pageYOffset - 120;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
     }
 
     // =========================================================
@@ -1396,6 +1539,25 @@
       };
       document.getElementById('btn-clear-all').addEventListener('click', limpiarTodo);
       document.getElementById('btn-limpiar-filtros').addEventListener('click', limpiarTodo);
+
+      // Paginación
+      document.getElementById('page-prev').addEventListener('click', () => {
+        if (paginaActual > 1) irAPagina(paginaActual - 1);
+      });
+      document.getElementById('page-next').addEventListener('click', () => {
+        const total = Math.max(1, Math.ceil(resultadoActual.length / PAGE_SIZE));
+        if (paginaActual < total) irAPagina(paginaActual + 1);
+      });
+      document.getElementById('page-input').addEventListener('change', (e) => {
+        const n = parseInt(e.target.value, 10);
+        if (!isNaN(n)) irAPagina(n);
+      });
+      document.getElementById('page-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const n = parseInt(e.target.value, 10);
+          if (!isNaN(n)) irAPagina(n);
+        }
+      });
     });
 
     // Hacer toggleDetalle accesible desde el atributo onclick inline
