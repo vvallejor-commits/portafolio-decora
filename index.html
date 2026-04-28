@@ -979,6 +979,40 @@
       return String(s || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
     }
 
+    // Debounce: ejecuta fn solo después de ms sin nuevas llamadas
+    function debounce(fn, ms) {
+      let t;
+      return function (...args) {
+        clearTimeout(t);
+        t = setTimeout(() => fn.apply(this, args), ms);
+      };
+    }
+
+    // Reescribe URLs de imágenes de Google Drive / Google User Content
+    // para pedir un tamaño mayor (mejor calidad en pantallas retina/mobile)
+    function mejorarImagen(url) {
+      if (!url) return '';
+      const TAM = 'w1000';
+
+      // lh3.googleusercontent.com/d/FILE_ID=w200-h200 o similar
+      if (/googleusercontent\.com/.test(url)) {
+        if (/=w\d+(-h\d+)?(-[a-z]+)?$/i.test(url)) {
+          return url.replace(/=w\d+(-h\d+)?(-[a-z]+)?$/i, '=' + TAM);
+        }
+        return url.includes('=') ? url : url + '=' + TAM;
+      }
+
+      // drive.google.com/thumbnail?id=XXX&sz=w200
+      if (/drive\.google\.com\/thumbnail/.test(url)) {
+        if (/[?&]sz=w\d+/.test(url)) {
+          return url.replace(/([?&]sz=)w\d+/, '$1' + TAM);
+        }
+        return url + (url.includes('?') ? '&' : '?') + 'sz=' + TAM;
+      }
+
+      return url;
+    }
+
     // CSV parser que maneja comillas y comas dentro de campos
     function parseCSV(text) {
       const rows = [];
@@ -1386,7 +1420,7 @@
         }
 
         const fotoHtml = p.foto
-          ? `<img src="${escapeHtml(p.foto)}" alt="${escapeHtml(p.nombre)}" loading="lazy" onerror="this.outerHTML='<span class=&quot;placeholder&quot;>🪴</span>'">`
+          ? `<img src="${escapeHtml(mejorarImagen(p.foto))}" alt="${escapeHtml(p.nombre)}" loading="lazy" decoding="async" onerror="this.outerHTML='<span class=&quot;placeholder&quot;>🪴</span>'">`
           : `<span class="placeholder">🪴</span>`;
 
         return `
@@ -1496,7 +1530,8 @@
       ['filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
         document.getElementById(id).addEventListener('change', aplicarFiltros);
       });
-      document.getElementById('filtro-busqueda').addEventListener('input', aplicarFiltros);
+      // Búsqueda con debounce de 500ms para no recalcular en cada tecla
+      document.getElementById('filtro-busqueda').addEventListener('input', debounce(aplicarFiltros, 500));
 
       // Combobox de tienda (multi-select)
       document.getElementById('store-trigger').addEventListener('click', (e) => {
