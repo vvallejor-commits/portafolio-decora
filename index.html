@@ -1098,6 +1098,8 @@
 
     // CSV parser que maneja comillas y comas dentro de campos
     function parseCSV(text) {
+      // Quita BOM (Byte Order Mark) si está presente al inicio
+      if (text && text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
       const rows = [];
       let row = [], cell = '', inQuotes = false;
       for (let i = 0; i < text.length; i++) {
@@ -1126,12 +1128,12 @@
         });
     }
 
-    // Buscar valor en una fila tolerando tildes, mayúsculas y espacios
+    // Buscar valor en una fila tolerando tildes, mayúsculas, espacios y puntuación
     function getCol(row, ...nombresPosibles) {
       const norm = s => String(s || '').toLowerCase()
-        .replace(/\s+/g, '')
         .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
-        .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u');
+        .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u')
+        .replace(/[^a-z0-9]/g, ''); // deja solo letras y dígitos
       const keys = Object.keys(row);
       for (const target of nombresPosibles) {
         const t = norm(target);
@@ -1198,16 +1200,39 @@
           stockPorSku[sku].total += cantidad;
         }
 
-        // Mapa de precios por SKU (opcional)
-        const preciosMap = {};
-        for (const row of filasPrecios) {
-          const sku = normalizarSKU(getCol(row, 'codigo sap', 'codigosap', 'SKU', 'Codigo', 'Material'));
-          if (!sku) continue;
-          preciosMap[sku] = {
-            precio:    parseNumero(getCol(row, 'oferta costa 1', 'oferta costa', 'Precio', 'Oferta')),
-            descuento: parsePorcentaje(getCol(row, 'dcto costa 1', 'dcto costa', 'Descuento', 'Dcto')),
-            estado:    String(getCol(row, 'estado', 'Estado') || '').toLowerCase().trim()
-          };
+        // Construcción del mapa de precios por SKU
+        const construirPreciosMap = (filas) => {
+          const mp = {};
+          for (const row of filas) {
+            const sku = normalizarSKU(getCol(row, 'codigo sap', 'codigosap', 'codigo', 'codigomaterial', 'codmaterial', 'SKU', 'Material'));
+            if (!sku) continue;
+            mp[sku] = {
+              precio:    parseNumero(getCol(row, 'oferta costa 1', 'ofertacosta1', 'oferta costa', 'ofertacosta', 'precio', 'oferta')),
+              descuento: parsePorcentaje(getCol(row, 'dcto costa 1', 'dctocosta1', 'dcto costa', 'dctocosta', 'descuento', 'dcto', 'porcentaje')),
+              estado:    String(getCol(row, 'estado', 'status') || '').toLowerCase().trim()
+            };
+          }
+          return mp;
+        };
+
+        let preciosMap = construirPreciosMap(filasPrecios);
+        // Respaldo: si la primera lectura no encontró SKUs (típicamente porque la fila 1 era título/metadata)
+        // reintentamos saltando 1, 2, 3 o 4 filas iniciales hasta encontrar los encabezados verdaderos.
+        if (Object.keys(preciosMap).length === 0 && textPrecios) {
+          for (let salto = 1; salto <= 4; salto++) {
+            const textoRecortado = textPrecios.split(/\r?\n/).slice(salto).join('\n');
+            const filasAlternas = parseCSV(textoRecortado);
+            const mapaIntento = construirPreciosMap(filasAlternas);
+            if (Object.keys(mapaIntento).length > 0) {
+              preciosMap = mapaIntento;
+              console.info(`[precios] Encabezados encontrados saltando ${salto} fila(s) iniciales.`);
+              break;
+            }
+          }
+        }
+        // Diagnóstico: si después de todo no hay precios, mostramos los encabezados detectados
+        if (Object.keys(preciosMap).length === 0 && filasPrecios.length > 0) {
+          console.warn('[precios] No se encontró ningún SKU. Encabezados leídos:', Object.keys(filasPrecios[0]));
         }
 
         // Cruce: solo productos que TIENEN stock Y existen en el catálogo
