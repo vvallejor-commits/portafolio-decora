@@ -563,6 +563,66 @@
       border-radius: 4px;
     }
 
+    /* Card en estado "inactivo" (liquidación) */
+    .card.inactivo {
+      border-color: rgba(245, 158, 11, 0.55);
+    }
+    .card.inactivo:hover {
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.18);
+    }
+
+    /* Ribbon de liquidación sobre la imagen */
+    .tag-liquidacion {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: linear-gradient(135deg, #F59E0B, #D97706);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 5px 11px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 8px rgba(217, 119, 6, 0.35);
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    /* Bloque de precio */
+    .precio-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+      min-height: 26px;
+    }
+    .precio {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--c-text);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+    }
+    .precio-no-disponible {
+      font-size: 12px;
+      color: #9CA3AF;
+      font-style: italic;
+    }
+    .descuento-badge {
+      display: inline-flex;
+      align-items: center;
+      background: #DC2626;
+      color: white;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 3px 9px;
+      border-radius: 4px;
+      letter-spacing: 0.02em;
+      box-shadow: 0 1px 2px rgba(220, 38, 38, 0.25);
+    }
+
     /* Badge de stock */
     .stock-badge {
       display: inline-flex;
@@ -882,6 +942,9 @@
       <select id="filtro-sublinea" class="filter-select">
         <option value="">Todas las sublíneas</option>
       </select>
+      <select id="filtro-estado" class="filter-select">
+        <option value="">Todos los estados</option>
+      </select>
       <select id="filtro-orden" class="filter-select">
         <option value="sku-desc">SKU más reciente</option>
         <option value="sku-asc">SKU más antiguo</option>
@@ -941,6 +1004,7 @@
     // =========================================================
     const URL_CATALOGO   = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQmWJ44LQGwvFPIr5JJQ0JSKkLbK8z8u3KBcgMK3LApd1Qso1aEHqhxtMbNHadOW0Exu5NUrHCrgHHR/pub?gid=0&single=true&output=csv";
     const URL_INVENTARIO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQmWJ44LQGwvFPIr5JJQ0JSKkLbK8z8u3KBcgMK3LApd1Qso1aEHqhxtMbNHadOW0Exu5NUrHCrgHHR/pub?gid=1787664807&single=true&output=csv";
+    const URL_PRECIOS    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQmWJ44LQGwvFPIr5JJQ0JSKkLbK8z8u3KBcgMK3LApd1Qso1aEHqhxtMbNHadOW0Exu5NUrHCrgHHR/pub?gid=1086284473&single=true&output=csv";
 
     // Umbral para que el badge se ponga en amarillo (poco stock)
     const UMBRAL_POCO_STOCK = 10;
@@ -968,6 +1032,25 @@
       const limpio = String(s || '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
       const n = Number(limpio);
       return isNaN(n) ? 0 : n;
+    }
+
+    // Porcentajes: acepta "30", "30%", "0.3", "0,3" y devuelve número entre 0–100
+    function parsePorcentaje(s) {
+      const limpio = String(s || '').replace(/[%\s]/g, '').replace(',', '.');
+      const n = Number(limpio);
+      if (isNaN(n) || n <= 0) return 0;
+      // Si viene en formato decimal (≤1), lo multiplica
+      if (n <= 1) return n * 100;
+      return n;
+    }
+
+    // Formateador de precio en pesos colombianos
+    const formateadorMoneda = new Intl.NumberFormat('es-CO', {
+      style: 'currency', currency: 'COP', maximumFractionDigits: 0, minimumFractionDigits: 0
+    });
+    function formatearPrecio(n) {
+      if (!n || n <= 0) return null;
+      return formateadorMoneda.format(n);
     }
 
     function escapeHtml(s) {
@@ -1070,13 +1153,21 @@
       }
 
       try {
-        const [textCatalogo, textInventario] = await Promise.all([
+        // La hoja de precios es opcional: si no está configurada, simplemente no se carga
+        const fetchOpcional = (url) => {
+          if (!url || /^PEGAR/.test(url)) return Promise.resolve('');
+          return fetch(url).then(r => r.text()).catch(() => '');
+        };
+
+        const [textCatalogo, textInventario, textPrecios] = await Promise.all([
           fetch(URL_CATALOGO).then(r => r.text()),
-          fetch(URL_INVENTARIO).then(r => r.text())
+          fetch(URL_INVENTARIO).then(r => r.text()),
+          fetchOpcional(URL_PRECIOS)
         ]);
 
         const filasCatalogo   = parseCSV(textCatalogo);
         const filasInventario = parseCSV(textInventario);
+        const filasPrecios    = textPrecios ? parseCSV(textPrecios) : [];
 
         // Catálogo: mapa por SKU con info del producto
         const catalogo = {};
@@ -1107,11 +1198,24 @@
           stockPorSku[sku].total += cantidad;
         }
 
+        // Mapa de precios por SKU (opcional)
+        const preciosMap = {};
+        for (const row of filasPrecios) {
+          const sku = normalizarSKU(getCol(row, 'codigo sap', 'codigosap', 'SKU', 'Codigo', 'Material'));
+          if (!sku) continue;
+          preciosMap[sku] = {
+            precio:    parseNumero(getCol(row, 'oferta costa 1', 'oferta costa', 'Precio', 'Oferta')),
+            descuento: parsePorcentaje(getCol(row, 'dcto costa 1', 'dcto costa', 'Descuento', 'Dcto')),
+            estado:    String(getCol(row, 'estado', 'Estado') || '').toLowerCase().trim()
+          };
+        }
+
         // Cruce: solo productos que TIENEN stock Y existen en el catálogo
         productos = [];
         for (const sku in stockPorSku) {
           const info = catalogo[sku];
           if (!info) continue; // SKU sin info de catálogo → omitir
+          const precioInfo = preciosMap[sku] || {};
           productos.push({
             sku,
             nombre:        info.nombre || sku,
@@ -1119,7 +1223,10 @@
             sublinea:      info.sublinea || '',
             foto:          info.foto || '',
             stockTotal:    stockPorSku[sku].total,
-            stockPorTienda: stockPorSku[sku].porTienda
+            stockPorTienda: stockPorSku[sku].porTienda,
+            precio:        precioInfo.precio    || 0,
+            descuento:     precioInfo.descuento || 0,
+            estado:        precioInfo.estado    || ''
           });
         }
 
@@ -1178,6 +1285,12 @@
       const sublineas = [...new Set(productos.map(p => p.sublinea).filter(Boolean))].sort((a, b) => a.localeCompare(b));
       document.getElementById('filtro-sublinea').innerHTML = '<option value="">Todas las sublíneas</option>' +
         sublineas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+
+      // Estados: capitaliza la primera letra para mostrarlos bonito
+      const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+      const estados = [...new Set(productos.map(p => p.estado).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+      document.getElementById('filtro-estado').innerHTML = '<option value="">Todos los estados</option>' +
+        estados.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(cap(e))}</option>`).join('');
     }
 
     // =========================================================
@@ -1288,6 +1401,7 @@
       const tiendasSel    = tiendasSeleccionadas.slice();
       const linea         = document.getElementById('filtro-linea').value;
       const sublinea      = document.getElementById('filtro-sublinea').value;
+      const estado        = document.getElementById('filtro-estado').value;
       const busquedaRaw   = document.getElementById('filtro-busqueda').value.trim();
       const busqueda      = busquedaRaw.toLowerCase();
       const orden         = document.getElementById('filtro-orden').value;
@@ -1304,6 +1418,7 @@
       let resultado = productos.filter(p => {
         if (linea    && p.linea    !== linea)    return false;
         if (sublinea && p.sublinea !== sublinea) return false;
+        if (estado   && p.estado   !== estado)   return false;
         if (tokens.length) {
           const haystack = normalizarTexto(`${p.nombre} ${p.sku} ${p.linea} ${p.sublinea}`);
           if (!tokens.every(tok => haystack.includes(tok))) return false;
@@ -1330,7 +1445,7 @@
       resultadoActual = resultado;
       if (!opciones.mantenerPagina) paginaActual = 1;
 
-      renderChips({ tiendasSel, linea, sublinea, busqueda: busquedaRaw });
+      renderChips({ tiendasSel, linea, sublinea, estado, busqueda: busquedaRaw });
       renderStats(resultado, tiendasSel);
       renderPagina();
     }
@@ -1423,12 +1538,24 @@
           ? `<img src="${escapeHtml(mejorarImagen(p.foto))}" alt="${escapeHtml(p.nombre)}" loading="lazy" decoding="async" onerror="this.outerHTML='<span class=&quot;placeholder&quot;>🪴</span>'">`
           : `<span class="placeholder">🪴</span>`;
 
+        // Precio y estado
+        const esInactivo = p.estado === 'inactivo';
+        const precioFmt  = formatearPrecio(p.precio);
+        const ribbon     = esInactivo ? `<span class="tag-liquidacion">Liquidación</span>` : '';
+        const dctoBadge  = (esInactivo && p.descuento > 0)
+          ? `<span class="descuento-badge">-${Math.round(p.descuento)}%</span>`
+          : '';
+        const precioBlock = precioFmt
+          ? `<div class="precio-row"><span class="precio">${precioFmt}</span>${dctoBadge}</div>`
+          : `<div class="precio-row"><span class="precio-no-disponible">Precio no disponible</span></div>`;
+
         return `
-          <article class="card">
-            <div class="card-image">${fotoHtml}</div>
+          <article class="card${esInactivo ? ' inactivo' : ''}">
+            <div class="card-image">${ribbon}${fotoHtml}</div>
             <div class="card-body">
               <span class="card-sku">${escapeHtml(p.sku)}</span>
               <h3 class="card-name">${escapeHtml(p.nombre)}</h3>
+              ${precioBlock}
               <span class="stock-badge ${claseStock} ${claseDetalle}" ${onClickAttr}>${etiqueta}</span>
               <div class="card-tags">
                 ${p.linea    ? `<span class="tag">${escapeHtml(p.linea)}</span>` : ''}
@@ -1441,7 +1568,7 @@
       }).join('');
     }
 
-    function renderChips({ tiendasSel, linea, sublinea, busqueda }) {
+    function renderChips({ tiendasSel, linea, sublinea, estado, busqueda }) {
       const cont = document.getElementById('active-chips');
       const items = [];
 
@@ -1453,6 +1580,10 @@
       }
       if (linea)     items.push({ label: `Línea: ${linea}`,         target: 'filtro-linea' });
       if (sublinea)  items.push({ label: `Sublínea: ${sublinea}`,   target: 'filtro-sublinea' });
+      if (estado) {
+        const cap = estado.charAt(0).toUpperCase() + estado.slice(1);
+        items.push({ label: `Estado: ${cap}`,                       target: 'filtro-estado' });
+      }
       if (busqueda)  items.push({ label: `🔍 "${busqueda}"`,        target: 'filtro-busqueda' });
 
       cont.innerHTML = items.map(it =>
@@ -1527,7 +1658,7 @@
       cargarDatos();
 
       // Filtros tradicionales (selects e input)
-      ['filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
+      ['filtro-linea', 'filtro-sublinea', 'filtro-estado', 'filtro-orden'].forEach(id => {
         document.getElementById(id).addEventListener('change', aplicarFiltros);
       });
       // Búsqueda con debounce de 500ms para no recalcular en cada tecla
@@ -1565,7 +1696,7 @@
 
       // Limpiar filtros (botón en barra y en estado vacío)
       const limpiarTodo = () => {
-        ['filtro-linea', 'filtro-sublinea', 'filtro-orden'].forEach(id => {
+        ['filtro-linea', 'filtro-sublinea', 'filtro-estado', 'filtro-orden'].forEach(id => {
           document.getElementById(id).selectedIndex = 0;
         });
         document.getElementById('filtro-busqueda').value = '';
