@@ -1316,9 +1316,8 @@
       document.getElementById('filtro-linea').innerHTML = '<option value="">Todas las líneas</option>' +
         lineas.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
 
-      const sublineas = [...new Set(productos.map(p => p.sublinea).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-      document.getElementById('filtro-sublinea').innerHTML = '<option value="">Todas las sublíneas</option>' +
-        sublineas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      // Sublíneas en cascada con la línea seleccionada
+      poblarSublineas('');
 
       // Estados: capitaliza la primera letra para mostrarlos bonito
       const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
@@ -1419,6 +1418,21 @@
     function closeStorePanel() {
       document.getElementById('store-panel').classList.remove('open');
       document.getElementById('store-trigger').setAttribute('aria-expanded', 'false');
+    }
+
+    // Llena el dropdown de sublíneas dependiendo de la línea seleccionada (cascada)
+    function poblarSublineas(lineaSeleccionada) {
+      const fuente = lineaSeleccionada
+        ? productos.filter(p => p.linea === lineaSeleccionada)
+        : productos;
+      const sublineas = [...new Set(fuente.map(p => p.sublinea).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b));
+      const sel = document.getElementById('filtro-sublinea');
+      const valorActual = sel.value;
+      sel.innerHTML = '<option value="">Todas las sublíneas</option>' +
+        sublineas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+      // Conserva el valor si sigue siendo válido; si no, lo resetea
+      sel.value = sublineas.includes(valorActual) ? valorActual : '';
     }
 
     function renderUltimaActualizacion() {
@@ -1547,7 +1561,7 @@
         const claseStock = stockMostrar > UMBRAL_POCO_STOCK ? 'high' : 'low';
         const etiqueta = tiendasSel.length === 1
           ? `${stockMostrar.toLocaleString('es-CO')} disponibles`
-          : `${stockMostrar.toLocaleString('es-CO')} en total`;
+          : `${stockMostrar.toLocaleString('es-CO')} UND`;
         const claseDetalle = mostrarDesglose ? 'detail' : '';
         const onClickAttr  = mostrarDesglose ? 'onclick="toggleDetalle(this)"' : '';
 
@@ -1633,6 +1647,8 @@
             const input = document.getElementById(target);
             if (input.tagName === 'SELECT') input.selectedIndex = 0;
             else input.value = '';
+            // Si se quita la línea, hay que repoblar las sublíneas para que muestre todas
+            if (target === 'filtro-linea') poblarSublineas('');
           }
           aplicarFiltros();
         });
@@ -1692,8 +1708,13 @@
       cargarDatos();
 
       // Filtros tradicionales (selects e input)
-      ['filtro-linea', 'filtro-sublinea', 'filtro-estado', 'filtro-orden'].forEach(id => {
+      ['filtro-sublinea', 'filtro-estado', 'filtro-orden'].forEach(id => {
         document.getElementById(id).addEventListener('change', aplicarFiltros);
+      });
+      // Línea: además de aplicar filtros, repuebla sublíneas en cascada
+      document.getElementById('filtro-linea').addEventListener('change', () => {
+        poblarSublineas(document.getElementById('filtro-linea').value);
+        aplicarFiltros();
       });
       // Búsqueda con debounce de 500ms para no recalcular en cada tecla
       document.getElementById('filtro-busqueda').addEventListener('input', debounce(aplicarFiltros, 500));
@@ -1735,6 +1756,7 @@
         });
         document.getElementById('filtro-busqueda').value = '';
         setStoreSelections([]);
+        poblarSublineas(''); // resetear cascada de sublíneas
         aplicarFiltros();
       };
       document.getElementById('btn-clear-all').addEventListener('click', limpiarTodo);
