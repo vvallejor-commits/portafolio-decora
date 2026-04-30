@@ -1128,17 +1128,26 @@
         });
     }
 
-    // Buscar valor en una fila tolerando tildes, mayúsculas, espacios y puntuación
+    // Buscar valor en una fila tolerando tildes, mayúsculas, espacios, puntuación y sufijos
     function getCol(row, ...nombresPosibles) {
       const norm = s => String(s || '').toLowerCase()
         .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e').replace(/[íìï]/g, 'i')
         .replace(/[óòö]/g, 'o').replace(/[úùü]/g, 'u')
         .replace(/[^a-z0-9]/g, ''); // deja solo letras y dígitos
       const keys = Object.keys(row);
+      // 1) Match exacto (más confiable)
       for (const target of nombresPosibles) {
         const t = norm(target);
         for (const k of keys) {
           if (norm(k) === t) return row[k];
+        }
+      }
+      // 2) Match por prefijo: el header empieza con el target (acepta sufijos como "Tx", "V2", etc.)
+      for (const target of nombresPosibles) {
+        const t = norm(target);
+        if (t.length < 4) continue; // evita falsos positivos con palabras muy cortas
+        for (const k of keys) {
+          if (norm(k).startsWith(t)) return row[k];
         }
       }
       return '';
